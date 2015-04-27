@@ -37,6 +37,64 @@ Theoretically, the script may lead to memory overload, as all activity info is c
 ZeroUnderscoreOu
 http://steamcommunity.com/id/ZeroUnderscoreOu/
 */
+
+var ActivityContent = $("blotter_content"); // activity block
+var ActivityList = new Object();
+var ActivityDay = new Date(); // current day
+ActivityDay.setHours(0,0,0,0); // activity uses beginning of the day in links
+var BaseURL = g_BlotterNextLoadURL.split("ajaxgetusernews")[0]; // profile link
+var g_BlotterNextLoadURL = null; // preventing loading on scrolling
+ActivityFilterLoad(); // loading
+function ActivityFilterLoad() {
+	var TempElem = new Element("Div"); // div for filter form and additional elements
+	TempElem.id = "DivFilter";
+	TempElem.innerHTML = // plain HTML, partly copied from Steam's event setting interface
+		'<Style>'
+			+ '@import "http://steamcommunity-a.akamaihd.net/public/css/skin_1/calendar.css?v=.944VhImsKDKs";'
+			+ '#cal1 {Position: Absolute; Z-Index: 1;}'
+			+ '.ActivitySet {Display:Inline-Block; Width:32%; Margin:0; Padding:2px; Border:none;}'
+			+ '.ActivityLabel {Display:Block; Max-Width:200px; Max-Height:1.5em; OverFlow:Hidden;}'
+			+ '.FilterButton {Float: Right;}'
+			+ '.FilterDay {Width: 100px; Margin-Right: 10px; Text-Align: Center;}'
+		+ '</Style>'
+		+ '<Form ID="ActivityFilter" OnSubmit="return false;">'
+			+ '<FieldSet ID="ActivitySet1" Class="ActivitySet"></FieldSet>'
+			+ '<FieldSet ID="ActivitySet2" Class="ActivitySet"></FieldSet>'
+			+ '<FieldSet ID="ActivitySet3" Class="ActivitySet"></FieldSet>'
+			+ '<Input ID="ActivityInput" Type="Text" Value="Day" Class="FilterDay" OnFocus="$(\'cal1\').show();">'
+			+ '<Input Type="Button" Value="Load" OnClick="ActivityDayLoad(ActivityDay.getTime()/1000)" Class="btn_darkblue_white_innerfade btn_small_wide">'
+			+ '<Input Type="Button" Value="Filter" OnClick="ActivityShow();" Class="btn_darkblue_white_innerfade btn_small_wide FilterButton">'
+		+ '</Form>'
+		+ '<Div ID="cal1">'
+			+ '<Div ID="calendarBox_cal1" Class="calendarBox">'
+				+ '<Div ID="monthRow_cal1" Class="monthRow">'
+					+ '<Div ID="monthNav_cal1" Class="monthNav"></Div>'
+					+ '<H1 ID="monthTitle_cal1" Class="monthTitle"></H1>'
+				+ '</Div>'
+				+ '<Div ID="weekHead_cal1" Class="weekHead">'
+					+ '<Div Class="day">S</Div>'
+					+ '<Div Class="day">M</Div>'
+					+ '<Div Class="day">T</Div>'
+					+ '<Div Class="day">W</Div>'
+					+ '<Div Class="day">T</Div>'
+					+ '<Div Class="day">F</Div>'
+					+ '<Div Class="day">S</Div>'
+				+ '</Div>'
+				+ '<Div ID="days_cal1" Class="days"></Div>'
+			+ '</Div>'
+		+ '</Div>';
+	TempElem = TempElem.appendChild(new Element("Script")); // missing scripts for calendar
+	TempElem.src = "http://steamcommunity-a.akamaihd.net/public/javascript/calendar.js?v=.SRHlwwlZP-Ie";
+	TempElem.type = "Text/JavaScript";
+	TempElem = TempElem.parentElement.appendChild(new Element("Script"));
+	TempElem.src = "http://steamcommunity-a.akamaihd.net/public/javascript/group_admin_functions.js?v=18ccuSc9Dzhv&l=english";
+	TempElem.type = "Text/JavaScript";
+	TempElem = TempElem.parentElement;
+	ActivityContent.insertBefore(TempElem,ActivityContent.firstChild); // using innerHTML instead doesn't seem to work
+	$("cal1").hide(); // hiding calendar
+	$("ActivityInput").value = ActivityDay.toLocaleDateString(); // filling the day
+	ActivityCalendarLoad("cal1",parseInt(ActivityDay.getMonth())+1,ActivityDay.getFullYear()); // calendar initialisation
+};
 function ActivityClear() {
 	for (var A=ActivityContent.children.length-1;A>=0;A--) {
 		var B = ActivityContent.children[A].id;
@@ -197,62 +255,3 @@ function ActivityDaySet(DayCur,CalendarCur) {
 	$("ActivityInput").value = TempDate.toLocaleDateString();
 	$(CalendarCur).hide(); // hiding after day select
 };
-function ActivityFilterLoad() {
-	var TempElem = new Element("Div"); // div for filter form and additional elements
-	TempElem.id = "DivFilter";
-	TempElem.innerHTML = // plain HTML, partly copied from Steam's event setting interface
-		'<Style>'
-			+ '@import "http://steamcommunity-a.akamaihd.net/public/css/skin_1/calendar.css?v=.944VhImsKDKs";'
-			+ '#cal1 {Position: Absolute; Z-Index: 1;}'
-			+ '.ActivitySet {Display:Inline-Block; Width:32%; Margin:0; Padding:2px; Border:none;}'
-			+ '.ActivityLabel {Display:Block; Max-Width:200px; Max-Height:1.5em; OverFlow:Hidden;}'
-			+ '.FilterButton {Float: Right;}'
-			+ '.FilterDay {Width: 100px; Margin-Right: 10px; Text-Align: Center;}'
-		+ '</Style>'
-		+ '<Form ID="ActivityFilter" OnSubmit="return false;">'
-			+ '<FieldSet ID="ActivitySet1" Class="ActivitySet"></FieldSet>'
-			+ '<FieldSet ID="ActivitySet2" Class="ActivitySet"></FieldSet>'
-			+ '<FieldSet ID="ActivitySet3" Class="ActivitySet"></FieldSet>'
-			+ '<Input ID="ActivityInput" Type="Text" Value="Day" Class="FilterDay" OnFocus="$(\'cal1\').show();">'
-			+ '<Input Type="Button" Value="Load" OnClick="ActivityDayLoad(ActivityDay.getTime()/1000)" Class="btn_darkblue_white_innerfade btn_small_wide">'
-			+ '<Input Type="Button" Value="Filter" OnClick="ActivityShow();" Class="btn_darkblue_white_innerfade btn_small_wide FilterButton">'
-		+ '</Form>'
-		+ '<Div ID="cal1">'
-			+ '<Div ID="calendarBox_cal1" Class="calendarBox">'
-				+ '<Div ID="monthRow_cal1" Class="monthRow">'
-					+ '<Div ID="monthNav_cal1" Class="monthNav"></Div>'
-					+ '<H1 ID="monthTitle_cal1" Class="monthTitle"></H1>'
-				+ '</Div>'
-				+ '<Div ID="weekHead_cal1" Class="weekHead">'
-					+ '<Div Class="day">S</Div>'
-					+ '<Div Class="day">M</Div>'
-					+ '<Div Class="day">T</Div>'
-					+ '<Div Class="day">W</Div>'
-					+ '<Div Class="day">T</Div>'
-					+ '<Div Class="day">F</Div>'
-					+ '<Div Class="day">S</Div>'
-				+ '</Div>'
-				+ '<Div ID="days_cal1" Class="days"></Div>'
-			+ '</Div>'
-		+ '</Div>';
-	TempElem = TempElem.appendChild(new Element("Script")); // missing scripts for calendar
-	TempElem.src = "http://steamcommunity-a.akamaihd.net/public/javascript/calendar.js?v=.SRHlwwlZP-Ie";
-	TempElem.type = "Text/JavaScript";
-	TempElem = TempElem.parentElement.appendChild(new Element("Script"));
-	TempElem.src = "http://steamcommunity-a.akamaihd.net/public/javascript/group_admin_functions.js?v=18ccuSc9Dzhv&l=english";
-	TempElem.type = "Text/JavaScript";
-	TempElem = TempElem.parentElement;
-	ActivityContent.insertBefore(TempElem,ActivityContent.firstChild); // using innerHTML instead doesn't seem to work
-	$("cal1").hide(); // hiding calendar
-	$("ActivityInput").value = ActivityDay.toLocaleDateString(); // filling the day
-	ActivityCalendarLoad("cal1",parseInt(ActivityDay.getMonth())+1,ActivityDay.getFullYear()); // calendar initialisation
-};
-
-var ActivityContent = $("blotter_content");
-var ActivityList = new Object();
-var ActivityDay = new Date(); // current day
-ActivityDay.setHours(0,0,0,0); // activity uses beginning of the day in links
-var BaseURL = g_BlotterNextLoadURL.split("ajaxgetusernews")[0]; // profile link
-var g_BlotterNextLoadURL = null; // preventing loading on scrolling
-
-ActivityFilterLoad();

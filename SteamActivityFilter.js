@@ -13,24 +13,24 @@ Unlike group calendar, personal calendar has a hardcoded ID in XML responce, and
 All cycles which removeChild() from cycled or appendChild() to another object go from end to beginning to avoid accessing deleted elements (in some functions appendChild() doesn't actually remove, but as I didn't check exact conditions for removing, I follow this rule).
 Partly due to asynchronous work of data loading, functions are chained for them to work when data is really loaded.
 Order & actions of functions:
-    ActivityFilterLoad() - independent, called at script begin
-        basic preparation, setting variables & adding elements to the page
+	ActivityFilterLoad() - independent, called at script begin
+		basic preparation, setting variables & adding elements to the page
 	ActivityClear() - independent, used by ActivityShow()
-        clearing of displayed activity
+		clearing of displayed activity
 	ActivityShow() - independent, called by form button
-        displaying filtered activity
+		displaying filtered activity
 	ActivityDayLoad() - independent, called by form button
-        loading activity for set day
+		loading activity for set day
 	ActivityParse() - called by ActivityDayLoad()
-        sorting activity by author & getting info
+		sorting activity by author & getting info
 	ActivityFilterShow() - called by ActivityParse()
-        generating filter form elements
+		generating filter form elements
 	ActivityCalendarLoad() - independent, used by form calendar and on calendar initialisation at ActivityFilterLoad() (assigned to calendar elements at ActivityCalendarFill())
-        loading calendar content
+		loading calendar content
 	ActivityCalendarFill() - called by ActivityCalendarLoad() (by XML request in it)
-        writing loaded content to form calendar
+		writing loaded content to form calendar
 	ActivityDaySet() - independent, called by form calendar (assigned to calendar elements at ActivityCalendarFill())
-        setting day to load activity for
+		setting day to load activity for
 Theoretically, the script may lead to memory overload, as all activity info is cloned from sorted list (ActivityList) to displayed list (page itself). Sorted list is kept constantly during the work, while displayed list is cleared on any new filtering. But I don't know how browser works with cloned elements and if they're actually removed on removeChild().
 
 04.2015

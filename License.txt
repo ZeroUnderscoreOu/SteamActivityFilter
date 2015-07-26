@@ -1,0 +1,6 @@
+SteamActivityFilter script license
+In case of private use, you are free to use and modify this project without any additional mentioning and publishing.
+In case of usage of parts of this project in some other public project you should mention me in the credits and send me a link to the project (so I could mention it in stuff like portfolio).
+In case of commercial use you should share part of the profit with me.
+In case of questions about the license you should contact me.
+In other cases use MPL 2.0.

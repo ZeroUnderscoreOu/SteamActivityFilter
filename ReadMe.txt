@@ -1,16 +1,23 @@
 SteamActivityFilter script
 Written by ZeroUnderscoreOu
 04.2015
-	Steam profile:
+	Steam:
 http://steamcommunity.com/id/ZeroUnderscoreOu/
 	Group:
 http://steamcommunity.com/groups/0_oWassup/
 	Forum:
 http://steamcommunity.com/groups/0_oWassup/discussions/1/611704730325656275/
+	Usage:
+Click on the date field to select the date to load activity for.
+Click on the "Load" button to load activity.
+Click on the checkboxes to select which activity to show.
+Click on the "Filter" button to show selected activity.
+Loaded activity stacks.
+
+
 
 	Technical info.
-ActivityDayLoad() - reworked version of StartLoadingBlotter(); g_BlotterNextLoadURL removed to prevent further loading; Blotter_RemoveDuplicates() removed to prevent hiding duplicates, which may hide an event when sorted by user; uses only requested day as a parameter, with base URL being in the function.
-g_BlotterNextLoadURL is cleaned as a global variable also to prevent further loading.
+ActivityDayLoad() - reworked version of StartLoadingBlotter(); g_BlotterNextLoadURL is cleared to prevent further loading; Blotter_RemoveDuplicates() removed to prevent hiding duplicates, which may hide an event when sorted by user; uses only requested day as a parameter, with base URL being in the function.
 In ActivityParse links are cycled through, because their position in page source isn't constant depending on the event; some events contain additional links, which should be skipped; regexp is used to check for link text - avatar links contain new lines & tabs instead of being empty; \w doesn't work with russian - apparently russian doesn't have letters.
 ActivityList contains sorted activity, stored by author's ID; has additional fields for author's name & activity type (.Name & .Type respectively).
 ActivityCalendarLoad() - reworked version of calChangeMonth(), calling ActivityCalendarFill() instead of calChangeReceive() and with calChangeMonthExtraFunc removed as superfluous.

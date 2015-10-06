@@ -42,6 +42,8 @@ May lead to memory overload.
 
 May skip some activity (which I haven't encountered).
 
+Does quite a few excessive operations, mainly caused dynamically loaded scripts.
+
 
 
 
@@ -50,17 +52,21 @@ May skip some activity (which I haven't encountered).
 
 #### Technical info:
 
-*ActivityDayLoad()* - reworked version of StartLoadingBlotter(); g_BlotterNextLoadURL is cleared to prevent further loading; Blotter_RemoveDuplicates() removed to prevent hiding duplicates, which may hide an event when sorted by user; uses only requested day as a parameter, with base URL being in the function.
-
-In *ActivityParse* links are cycled through, because their position in page source isn't constant depending on the event; some events contain additional links, which should be skipped; regexp is used to check for link text - avatar links contain new lines & tabs instead of being empty; \w doesn't work with russian - apparently russian doesn't have letters.
-
 *ActivityList* contains sorted activity, stored by author's ID; has additional fields for author's name & activity type (.Name & .Type respectively).
+
+*BaseURL* is used for links for profile related resources; it's gotten from g_BlotterNextLoadURL, because http://steamcommunity.com/my/ & http://steamcommunity.com/profiles/ doesn't work with the calendar - probably because of the redirect, each month loading attempt loads current month. I don't know why I prefered to get URL this way instead of window.location.href. Probably more cool.
 
 *ActivityCalendarLoad()* - reworked version of calChangeMonth(), calling ActivityCalendarFill() instead of calChangeReceive() and with calChangeMonthExtraFunc removed as superfluous.
 
 *ActivityCalendarFill()* - reworked version of calChangeReceive(), changing links of month navigation & day elements; new Element() used instead of document.createElement(); probably will change or add an option for week start.
 
-*BaseURL* is used for links for profile related resources; it's gotten from g_BlotterNextLoadURL, because http://steamcommunity.com/my/ & http://steamcommunity.com/profiles/ doesn't work with the calendar - probably because of the redirect, each month loading attempt loads current month.
+*ActivityDayLoad()* - reworked version of StartLoadingBlotter(); g_BlotterNextLoadURL is cleared to prevent further loading; Blotter_RemoveDuplicates() removed to prevent hiding duplicates, which may hide an event when sorted by user; uses only requested day as a parameter, with base URL being in the function.
+
+In *ActivityParse* links are cycled through, because their position in page source isn't constant depending on the event; some events contain additional links, which should be skipped; regexp is used to check for link text - avatar links contain new lines & tabs instead of being empty; \w doesn't work with russian - apparently russian doesn't have letters.
+
+In *ActivityParse()* the ending script is parsed, which is appended after all activity to replace dynamic (store, community & YouTube) links with actual dynamic content. Then the replacements, which it should've made, are performed. IMO making all replacements right away, instead of separately for each link on load, is more efficient. Replacement content is also unescaped because for some reason it isn't on regular addition. Then all content is sorted by author ID, and ActivityList is filled.
+
+*ActivityContentShow()* uses a "hack" to make scripts from activity work. If added as is, they don't trigger, so instead they're removed from activity to separate element and then readded. Main problem I had was with scripts which are responsible for comment input & emoticon selection. They weren't executed with any combination of addition. I suspect that might be related to them being escaped. I also suspect that I overlooked some easier way.
 
 Some of the URLs are hardcoded in functions, which is probably not the most compatible way.
 
@@ -72,17 +78,29 @@ Partly due to asynchronous work of data loading, functions are chained for them 
 
 Order & actions of functions:
 
-- *ActivityFilterLoad()* - independent, called at script begin
+- *ActivityInitialize()* - independent, called at script begin
 
 	- basic preparation, setting variables & adding elements to the page
 
-- *ActivityClear()* - independent, used by ActivityShow()
+- *ActivityCalendarLoad()* - independent, called by form calendar and on calendar initialization at ActivityInitialize() (assigned to calendar elements at ActivityCalendarFill())
+
+	- loading calendar content
+
+- *ActivityCalendarFill()* - called by ActivityCalendarLoad() (by XML request in it)
+
+	- writing loaded content to form calendar
+
+- *ActivityDaySet()* - independent, called by form calendar (assigned to calendar elements at ActivityCalendarFill())
+
+	- setting day to load activity for
+
+- *ActivityFilterClear()* - independent, called by ActivityFilterShow() & form button
+
+	- clearing of filter form
+
+- *ActivityContentClear()* - independent, called by ActivityContentShow() & form button
 
 	- clearing of displayed activity
-
-- *ActivityShow()* - independent, called by form button
-
-	- displaying filtered activity
 
 - *ActivityDayLoad()* - independent, called by form button
 
@@ -96,16 +114,8 @@ Order & actions of functions:
 
 	- generating filter form elements
 
-- *ActivityCalendarLoad()* - independent, used by form calendar and on calendar initialisation at ActivityFilterLoad() (assigned to calendar elements at ActivityCalendarFill())
+- *ActivityContentShow()* - independent, called by form button
 
-	- loading calendar content
+	- displaying filtered activity
 
-- *ActivityCalendarFill()* - called by ActivityCalendarLoad() (by XML request in it)
-
-	- writing loaded content to form calendar
-
-- *ActivityDaySet()* - independent, called by form calendar (assigned to calendar elements at ActivityCalendarFill())
-
-	- setting day to load activity for
-
-Theoretically, the script may lead to memory overload, as all activity info is cloned from sorted list (ActivityList) to displayed list (page itself). Sorted list is kept constantly during the work, while displayed list is cleared on any new filtering. But I don't know how browser works with cloned elements and if they're actually removed on removeChild().
+Theoretically, the script may lead to memory overload, as all activity info is cloned from sorted list (ActivityList) to displayed list (page itself). Sorted list is kept constantly during the work (until cleared by user), while displayed list is cleared on any new filtering. But I don't know how browser works with cloned elements and if they're actually removed on removeChild().

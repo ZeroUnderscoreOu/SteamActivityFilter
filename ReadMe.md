@@ -4,21 +4,21 @@ Written by **ZeroUnderscoreOu**
 
 04.2015
 
-### Steam:
+#### Steam:
 
 http://steamcommunity.com/id/ZeroUnderscoreOu/
 
-### Group:
+#### Group:
 
 http://steamcommunity.com/groups/0_oWassup/
 
-### Forum:
+#### Forum:
 
 http://steamcommunity.com/groups/0_oWassup/discussions/1/611704730325656275/
 
 
 
-### Usage:
+#### Usage:
 
 - Click on the date field to select the date to load activity for.
 
@@ -36,7 +36,7 @@ Loaded activity stacks.
 
 
 
-### Possible problems:
+#### Possible problems:
 
 May lead to memory overload.
 
@@ -48,7 +48,7 @@ May skip some activity (which I haven't encountered).
 
 
 
-### Technical info:
+#### Technical info:
 
 *ActivityDayLoad()* - reworked version of StartLoadingBlotter(); g_BlotterNextLoadURL is cleared to prevent further loading; Blotter_RemoveDuplicates() removed to prevent hiding duplicates, which may hide an event when sorted by user; uses only requested day as a parameter, with base URL being in the function.
 

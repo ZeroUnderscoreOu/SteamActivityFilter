@@ -7,16 +7,23 @@ http://steamcommunity.com/id/ZeroUnderscoreOu/
 http://steamcommunity.com/groups/0_oWassup/
 	Forum:
 http://steamcommunity.com/groups/0_oWassup/discussions/1/611704730325656275/
+
 	Usage:
 Click on the date field to select the date to load activity for.
+Enter the ammount of days to load activity for (0 - only current day; accepts negative values).
 Click on the "Load" button to load activity.
 Click on the checkboxes to select which activity to show.
 Click on the "Filter" button to show selected activity.
+Click on the "Clear" button to clear showed activity.
 Loaded activity stacks.
 
+	Possible problems:
+May lead to memory overload.
+May skip some activity (which I haven't encountered).
 
 
-	Technical info.
+
+	Technical info:
 ActivityDayLoad() - reworked version of StartLoadingBlotter(); g_BlotterNextLoadURL is cleared to prevent further loading; Blotter_RemoveDuplicates() removed to prevent hiding duplicates, which may hide an event when sorted by user; uses only requested day as a parameter, with base URL being in the function.
 In ActivityParse links are cycled through, because their position in page source isn't constant depending on the event; some events contain additional links, which should be skipped; regexp is used to check for link text - avatar links contain new lines & tabs instead of being empty; \w doesn't work with russian - apparently russian doesn't have letters.
 ActivityList contains sorted activity, stored by author's ID; has additional fields for author's name & activity type (.Name & .Type respectively).

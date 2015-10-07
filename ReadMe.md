@@ -14,7 +14,7 @@ http://steamcommunity.com/groups/0_oWassup/
 
 #### Forum:
 
-http://steamcommunity.com/groups/0_oWassup/discussions/1/611704730325656275/
+http://steamcommunity.com/groups/0_oWassup/discussions/3/
 
 
 

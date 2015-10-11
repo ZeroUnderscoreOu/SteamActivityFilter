@@ -28,6 +28,8 @@ http://steamcommunity.com/groups/0_oWassup/discussions/3/
 
 - Click on the checkboxes to select which activity to show.
 
+- Click on the "All" button to select all the checkboxes or on the "None" button to select none.
+
 - Click on the "Filter" button to show selected activity.
 
 - Click on the "Clear" button to clear showed activity.
@@ -42,7 +44,7 @@ May lead to memory overload.
 
 May skip some activity (which I haven't encountered).
 
-Does quite a few excessive operations, mainly caused dynamically loaded scripts.
+Does a few excessive operations, mainly caused by dynamically loaded scripts.
 
 
 
@@ -52,7 +54,7 @@ Does quite a few excessive operations, mainly caused dynamically loaded scripts.
 
 #### Technical info:
 
-*ActivityList* contains sorted activity, stored by author's ID; has additional fields for author's name & activity type (.Name & .Type respectively).
+*ActivityList* contains activity, sorted by author's ID; fields are .Content for activity itself, .Name for author's name & .Type for activity type.
 
 *BaseURL* is used for links for profile related resources; it's gotten from g_BlotterNextLoadURL, because http://steamcommunity.com/my/ & http://steamcommunity.com/profiles/ doesn't work with the calendar - probably because of the redirect, each month loading attempt loads current month. I don't know why I prefered to get URL this way instead of window.location.href. Probably more cool.
 
@@ -62,11 +64,12 @@ Does quite a few excessive operations, mainly caused dynamically loaded scripts.
 
 *ActivityDayLoad()* - reworked version of StartLoadingBlotter(); g_BlotterNextLoadURL is cleared to prevent further loading; Blotter_RemoveDuplicates() removed to prevent hiding duplicates, which may hide an event when sorted by user; uses only requested day as a parameter, with base URL being in the function.
 
-In *ActivityParse* links are cycled through, because their position in page source isn't constant depending on the event; some events contain additional links, which should be skipped; regexp is used to check for link text - avatar links contain new lines & tabs instead of being empty; \w doesn't work with russian - apparently russian doesn't have letters.
+In *ActivityParse()*
+1. All screenshot events get additional function call added. That function sets scrollbars where they're needed and originally is called after activity load, but since activity isn't displayed right away and is split, call is added for each event where it might be needed. This may lead to repeated calls & is bit excessive, but the function itself doesn't perform actions which aren't needed, it's better to call it this way then on each event addition, and I couldn't rewrite it to work with not displayed HTML.
+2. The activity ending script is parsed, which is originally appended after all activity to replace dynamic (store, community & YouTube) links with actual dynamic content. The replacements, which it should've made, are performed. IMO making all replacements right away, instead of separately for each link on load, is more efficient. Replacement content is also unescaped, because for some reason it isn't on regular addition.
+3. All events are parsed & sorted by author ID, and ActivityList is filled. During that, author profile links are cycled through, because their position in page isn't constant depending on the event. Some events contain additional links, which should be skipped. RegExp is used to check for link text - avatar links contain new lines & tabs instead of being empty. \w doesn't work with russian (and any other non-latin language) - apparently, russian doesn't have letters.
 
-In *ActivityParse()* the ending script is parsed, which is appended after all activity to replace dynamic (store, community & YouTube) links with actual dynamic content. Then the replacements, which it should've made, are performed. IMO making all replacements right away, instead of separately for each link on load, is more efficient. Replacement content is also unescaped because for some reason it isn't on regular addition. Then all content is sorted by author ID, and ActivityList is filled.
-
-*ActivityContentShow()* uses a "hack" to make scripts from activity work. If added as is, they don't trigger, so instead they're removed from activity to separate element and then readded. Main problem I had was with scripts which are responsible for comment input & emoticon selection. They weren't executed with any combination of addition. I suspect that might be related to them being escaped. I also suspect that I overlooked some easier way.
+*ActivityContentShow()* uses a "hack" to make scripts from activity work. If added as is, they don't trigger, so instead they're removed from activity to separate element and then readded. Main problems I had was with scripts which enable screenshot galleries, but also with responsible for comment input & emoticon selection. They weren't executed after any other way of addition. Though I suspect that I overlooked something.
 
 Some of the URLs are hardcoded in functions, which is probably not the most compatible way.
 
@@ -96,11 +99,15 @@ Order & actions of functions:
 
 - *ActivityFilterClear()* - independent, called by ActivityFilterShow() & form button
 
-	- clearing of filter form
+	- clearing of form
 
 - *ActivityContentClear()* - independent, called by ActivityContentShow() & form button
 
 	- clearing of displayed activity
+
+- *ActivityCheckboxes()* - independent, called by form button
+
+	- setting all form checkboxes to selected state
 
 - *ActivityDayLoad()* - independent, called by form button
 
@@ -108,14 +115,14 @@ Order & actions of functions:
 
 - *ActivityParse()* - called by ActivityDayLoad()
 
-	- sorting activity by author & getting info
+	- preparing & sorting activity & getting info
 
 - *ActivityFilterShow()* - called by ActivityParse()
 
-	- generating filter form elements
+	- generating form elements
 
 - *ActivityContentShow()* - independent, called by form button
 
 	- displaying filtered activity
 
-Theoretically, the script may lead to memory overload, as all activity info is cloned from sorted list (ActivityList) to displayed list (page itself). Sorted list is kept constantly during the work (until cleared by user), while displayed list is cleared on any new filtering. But I don't know how browser works with cloned elements and if they're actually removed on removeChild().
+In the original verions of script, all displayed activity was cloned, but it turned out that adding it to the page doesn't remove it from ActivityList as I thought. Still, this data might get doubled because of being both on the page & in ActivityList, I'm not sure about that. Also, data in ActivityList is kept constantly during the work (until cleared by user), while displayed data is cleared on any new filtering. Depending on the ammount of activity & number of days, that may be pretty heavy.

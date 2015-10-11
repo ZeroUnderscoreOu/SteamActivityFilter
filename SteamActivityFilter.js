@@ -7,6 +7,11 @@ http://steamcommunity.com/groups/0_oWassup/discussions/3/
 
 //"use strict";
 
+//ToDo
+// (возможно) переписать перебор массивов и коллекций на forEach
+// (возможно) переименовать ActivityFilter в ActivityForm (некоторые локальные переменные - тоже)
+// (возможно) переименовать ActivityLength в форме и в особенности в ActivityDayLoad()
+
 var ActivityContent = $("blotter_content"); // activity block
 var ActivityList = {}; // activity list, sorted by author; without explicit assign script crashes on "in" operaton on empty list
 var ActivityDay = new Date(); // current day
@@ -18,22 +23,26 @@ function ActivityInitialize() {
 	TempElem.innerHTML = // plain HTML, partly copied from Steam's event setting interface
 		'<Style>'
 			+ '@import "http://steamcommunity-a.akamaihd.net/public/css/skin_1/calendar.css?v=.944VhImsKDKs";'
-			+ '#cal1 {Position: Absolute; Z-Index: 10;}'
-			+ '.ActivitySet {Display:Inline-Block; Width:32%; Margin:0; Padding:2px; Border:none;}'
+			+ '#cal1 {Position:Absolute; Z-Index:10;}'
+			+ '.ActivitySet {Display:Inline-Block; Width:32%; Margin:0; Padding:2px; Border:None;}'
 			+ '.ActivityLabel {Display:Block; Max-Width:200px; Max-Height:1.5em; OverFlow:Hidden;}'
-			+ '.ActivityRight {Margin-Left: 10px; Float: Right;}'
-			+ '.ActivityDate {Width: 100px; Margin-Right: 10px; Text-Align: Center;}'
-			+ '.ActivityLength {Width: 25px; Margin-Right: 10px; Text-Align: Center;}'
+			+ '.ActivityLeft {Margin-Right:10px; Text-Align:Center;}'
+			+ '.ActivityRight {Margin-Left:10px; Float:Right;}'
+			+ '.ActivityDate {Width:100px;}'
+			+ '.ActivityLength {Width:25px;}'
 		+ '</Style>'
 		+ '<Form ID="ActivityFilter" OnSubmit="return false;">' // activity filter form
 			+ '<FieldSet ID="ActivitySet1" Class="ActivitySet"></FieldSet>'
 			+ '<FieldSet ID="ActivitySet2" Class="ActivitySet"></FieldSet>'
 			+ '<FieldSet ID="ActivitySet3" Class="ActivitySet"></FieldSet>'
-			+ '<Input ID="ActivityDate" Type="Text" Value="Date" Class="ActivityDate" OnFocus="$(\'cal1\').show();">'
-			+ '<Input ID="ActivityLength" Type="Text" Value="0" Class="ActivityLength">'
-			+ '<Input Type="Button" Value="Load" OnClick="ActivityDayLoad(ActivityDay.getTime()/1000)" Class="btn_darkblue_white_innerfade btn_small_wide">'
+			+ '<Input ID="ActivityDate" Type="Text" Value="Date" Class="ActivityLeft ActivityDate" OnFocus="$(\'cal1\').show();">'
+			+ '<B Class="ActivityLeft">+</B>'
+			+ '<Input ID="ActivityLength" Type="Text" Value="0" Class="ActivityLeft ActivityLength">'
+			+ '<Input Type="Button" Value="Load" OnClick="ActivityDayLoad(ActivityDay.getTime()/1000)" Class="btn_green_white_innerfade btn_small_wide">'
+			+ '<Input Type="Button" Value="Filter" OnClick="ActivityContentShow();" Class="btn_green_white_innerfade btn_small_wide ActivityRight">'
 			+ '<Input Type="Button" Value="Clear" OnClick="ActivityList={};ActivityFilterClear();ActivityContentClear();" Class="btn_darkblue_white_innerfade btn_small_wide ActivityRight">'
-			+ '<Input Type="Button" Value="Filter" OnClick="ActivityContentShow();" Class="btn_darkblue_white_innerfade btn_small_wide ActivityRight">'
+			+ '<Input Type="Button" Value="None" OnClick="ActivityCheckboxes(false);" Class="btn_darkblue_white_innerfade btn_small_wide ActivityRight">'
+			+ '<Input Type="Button" Value="All" OnClick="ActivityCheckboxes(true);" Class="btn_darkblue_white_innerfade btn_small_wide ActivityRight">'
 		+ '</Form>'
 		+ '<Div ID="cal1">' // calendar template
 			+ '<Div ID="calendarBox_cal1" Class="calendarBox">'
@@ -94,7 +103,7 @@ function ActivityCalendarFill() {
 			};
 			var NewDays = Response.getElementsByTagName("day");
 			var C = 0;
-			for(var X=0;X<NewDays.length;X++) {
+			for (var X=0;X<NewDays.length;X++) {
 				if (C==7) {
 					C = 0;
 					var Breaker = new Element("Br");
@@ -123,12 +132,14 @@ function ActivityDaySet(LocDay,LocCalendar) {
 	$(LocCalendar).hide(); // hiding after day select
 };
 function ActivityFilterClear() {
-	var TempElem;
-	for (var A=1;A<=ActivityContent.getElementsByClassName("ActivitySet").length;A++) {
-		TempElem = $("ActivitySet"+A.toString());
-		while (TempElem.children.length>0) { // clearing filter form before filling
-			TempElem.removeChild(TempElem.lastElementChild);
+	var TempElem = ActivityContent.getElementsByClassName("ActivitySet");
+	for (var A=0;A<TempElem.length;A++) { // clearing filter form before filling
+		TempElem[A].innerHTML = "";
+		/*
+		while (TempElem[A].children.length>0) {
+			TempElem[A].removeChild(TempElem[A].lastElementChild);
 		};
+		*/
 	};
 };
 function ActivityContentClear() {
@@ -141,11 +152,17 @@ function ActivityContentClear() {
 		};
 	};
 };
+function ActivityCheckboxes(TargetState) {
+	var FilterForm = $("ActivityFilter").getElementsByClassName("ActivityCheckbox");
+	for (var A=0;A<FilterForm.length;A++) { // setting all filter checkboxes to the passed state if they're not already
+		if (FilterForm[A].checked!=TargetState) {
+			FilterForm[A].checked = TargetState;
+		};
+	};
+};
 function ActivityDayLoad(LocDate) {
 	var ActivityLength = parseInt($("ActivityLength").value);
 	if (isNaN(ActivityLength)) { // if wrong ammount of days
-		//new Effect.Morph("ActivityLength",{style:"Border-Color:#FF9900",duration:0.5});
-		//$("ActivityLength").style.borderColor = "";
 		new Effect.Highlight("ActivityLength"); // flashy!
 		$("ActivityLength").value = 0;
 	} else {
@@ -178,17 +195,22 @@ function ActivityParse(ContentHTML) {
 	var EventType;
 	var EventLink;
 	var EventContainer = new Element("Div"); // container element for activity
-	var EventList;
 	var EventLinks; // don't confuse with EventLink - former contains dynamic links & latter - link to event author
 	var EventScripts;
 	var TempElem;
 	EventContainer.innerHTML = ContentHTML; // enabling element functions
-	EventList = EventContainer.getElementsByClassName("blotter_block"); // all events
+	//EventContainer.update(ContentHTML); update() doesn't fit, because it removes scripts from HTML
+	EventScripts = Array.prototype.slice.call(EventContainer.getElementsByClassName("highlight_strip_scroll")); // screenshot galleries' preview panel
+	EventScripts.forEach(function(EachMatch){
+		TempElem = new Element("Script");
+		TempElem.textContent = "Blotter_AddHighlightSliders();"; // function setting scrollbars; may lead to repeated calls, but still better then calling on each event addition
+		EachMatch.appendChild(TempElem);
+	});
 	EventLinks = Array.prototype.slice.call(EventContainer.getElementsByClassName("bb_link")); // transforming HTMLCollection to array
 	EventLinks = EventLinks.filter(function(FilterMatch){return /dynamiclink_\d+/.test(FilterMatch.id)}); // filtering only replaced links by corresponding IDs
 	EventScripts = EventContainer.getElementsByTagName("Script");
 	EventScripts = EventScripts[EventScripts.length-1]; // last script, appended at the end of activity; contains dynamic link replacing functions; bit risky to access it by order
-	console.log("EventScripts.textContent \r\n",EventScripts.textContent);
+	EventContainer = EventContainer.getElementsByClassName("blotter_block"); // all events
 	EventScripts.textContent = EventScripts.textContent.replace( // searching for dynamic contents replacing functions and performing replacemnts
 		/ReplaceDynamicLink\(\s*[^\\](')dynamiclink_(\d+)\1,\s*[^\\](\")(.*?)\3\s*\);/gi, // unescaped single/double quotes and contents of them
 		function(SearchMatch,B1,B2,B3,B4,SearchOffset,SearchString){ // only B2 & B4 (bracket 2 & bracket 4) are needed - serial number & element contents
@@ -199,7 +221,7 @@ function ActivityParse(ContentHTML) {
 			return ""; // erasing found function
 		}
 	);
-/* same as above replacement, but separately for each match instead of global
+	/* same as above replacement, but separately for each match instead of global
 	EventLinks.forEach(function(EachMatch){
 		EventScripts.textContent = EventScripts.textContent.replace(
 			new RegExp("ReplaceDynamicLink\\(\\s*[^\\\\](['\"])"+EachMatch.id+"\\1,\\s*[^\\\\](['\"])(.*?)\\2\\s*\\);","i"), // too much escaping
@@ -210,56 +232,64 @@ function ActivityParse(ContentHTML) {
 			}
 		);
 	});
-*/
-	for (var A=EventList.length-1;A>=0;A--) { // appendChild() doesn't remove elements here, but still
-		if (EventList[A].getElementsByClassName("blotter_author_block").length>0) { // event header
-			TempElem = EventList[A].getElementsByClassName("blotter_author_block")[0].getElementsByTagName("A");
+	*/
+	for (var A=EventContainer.length-1;A>=0;A--) { // appendChild() doesn't remove elements here, but still
+		if (EventContainer[A].getElementsByClassName("blotter_author_block").length>0) { // event header
+			TempElem = EventContainer[A].getElementsByClassName("blotter_author_block")[0].getElementsByTagName("A");
 			for (var B=0;B<TempElem.length;B++) { // cycling through found links
-				if((TempElem[B].href.indexOf("/id/")!=-1||TempElem[B].href.indexOf("/profiles/")!=-1)&&/\S/.test(TempElem[B].textContent)) { // checking for link text
+				if ((TempElem[B].href.indexOf("/id/")!=-1||TempElem[B].href.indexOf("/profiles/")!=-1)&&/\S/.test(TempElem[B].textContent)) { // checking for link text
 					EventAuthor = TempElem[B].textContent;
 					EventType = "Player";
 					EventLink = TempElem[B].href;
 					break;
 				};
 			};
-		} else if (EventList[A].getElementsByClassName("blotter_group_announcement_header").length>0) {
-			TempElem = EventList[A].getElementsByClassName("blotter_group_announcement_header")[0].getElementsByTagName("A");
+		} else if (EventContainer[A].getElementsByClassName("blotter_group_announcement_header").length>0) {
+			TempElem = EventContainer[A].getElementsByClassName("blotter_group_announcement_header")[0].getElementsByTagName("A");
 			for (var B=0;B<TempElem.length;B++) {
-				if(TempElem[B].href.indexOf("/groups/")!=-1&&/\S/.test(TempElem[B].textContent)) {
+				if (TempElem[B].href.indexOf("/groups/")!=-1&&/\S/.test(TempElem[B].textContent)) {
 					EventAuthor = TempElem[B].textContent;
 					EventType = "Group";
 					EventLink = TempElem[B].href;
 					break;
 				};
 			};
-		} else if (EventList[A].getElementsByClassName("blotter_group_announcement_header_ogg").length>0) {
-			TempElem = EventList[A].getElementsByClassName("blotter_group_announcement_header_ogg")[0].getElementsByTagName("A");
+		} else if (EventContainer[A].getElementsByClassName("blotter_group_announcement_header_ogg").length>0) {
+			TempElem = EventContainer[A].getElementsByClassName("blotter_group_announcement_header_ogg")[0].getElementsByTagName("A");
 			for (var B=0;B<TempElem.length;B++) {
-				if(TempElem[B].href.indexOf("/games/")!=-1&&/\S/.test(TempElem[B].textContent)) {
+				if (TempElem[B].href.indexOf("/games/")!=-1&&/\S/.test(TempElem[B].textContent)) {
 					EventAuthor = TempElem[B].textContent;
 					EventType = "Game";
 					EventLink = TempElem[B].href;
 					break;
 				};
 			};
-		} else if (EventList[A].getElementsByClassName("blotter_daily_rollup").length>0) { // achievements & stuff
+		} else if (EventContainer[A].getElementsByClassName("blotter_daily_rollup").length>0) { // achievements & stuff
 			EventAuthor = "Gabe Newell Daily"; // daily news from Gabe
 			EventType = "Daily";
 			EventLink = "http://steamcommunity.com/id/gabelogannewell";
 			//EventAuthor = 22202;
-		} else { // checking for unsorted, still haven't checked if script works with some events
-			console.log("Other div "+A.toString());
-			console.log(EventList[A].outerHTML);
+		} else { // checking for unsorted, still not sure if script works with all events
+			console.log("Unsorted activity",A.toString());
+			console.log(EventContainer[A].outerHTML);
 		};
 		TempElem = EventLink.split("/"); // getting ID from link
 		TempElem = TempElem[TempElem.length-1];
 		if (TempElem.length<3) {alert("Link is too short ("+EventLink+").");}; // just to check that none of the links end with a slash
 		if (!(TempElem in ActivityList)) {
-			ActivityList[TempElem] = new Element("Div");
+			/*
+			ActivityList[TempElem] = {}; // initializing
+			ActivityList[TempElem].Content = new Element("Div");
 			ActivityList[TempElem].Name = EventAuthor;
 			ActivityList[TempElem].Type = EventType;
+			*/
+			ActivityList[TempElem] = {
+				"Name": EventAuthor,
+				"Type": EventType,
+				"Content": new Element("Div")
+			};
 		};
-		ActivityList[TempElem].appendChild(EventList[A]);
+		ActivityList[TempElem].Content.appendChild(EventContainer[A]);
 	};
 	ActivityFilterShow();
 };
@@ -274,26 +304,31 @@ function ActivityFilterShow() {
 		TempElem = TempElem.insertBefore(new Element("Input"),TempElem.firstChild); // checkbox with ID
 		TempElem.type = "Checkbox";
 		TempElem.value = LocName;
+		TempElem.className = "ActivityCheckbox"; // for easier access to checkboxes
 		$("ActivitySet"+SetNumber.toString()).appendChild(TempElem.parentElement);
 		SetNumber++; // switching to next set
 		if (SetNumber>ActivityContent.getElementsByClassName("ActivitySet").length) {SetNumber=1}; // wrapping around
 	};
 };
 function ActivityContentShow() {
-	var FormElem = $("ActivityFilter").getElementsByTagName("Input"); // all form inputs; bit lazy
+	var FilterForm = $("ActivityFilter").getElementsByClassName("ActivityCheckbox"); // all filter checkboxes
 	var TempElem;
 	ActivityContentClear();
-	for (var A in FormElem) {
-		if (FormElem[A].checked) { // checking for checked checkboxes
-			TempElem = ActivityList[FormElem[A].value].clone(true); // true for deep cloning
+	for (var A=0;A<FilterForm.length;A++) {
+		if (FilterForm[A].checked) { // checking for checked checkboxes
+			//TempElem = ActivityList[FilterForm[A].value].Content.clone(true); // true for deep cloning; turns out cloning was unneeded
+			TempElem = ActivityList[FilterForm[A].value].Content;
+			TempElem = new Element("Div").update(ActivityList[FilterForm[A].value].Content);
 			var ScriptList = TempElem.getElementsByTagName("Script");
-			var ActivityScript = new Element("Script");
+			var ScriptContainer = new Element("Script");
 			for (var B=ScriptList.length-1;B>=0;B--) { // hack to make scripts work - removing them from activity element and readding
-				ActivityScript.textContent += "\n" + ScriptList[B].textContent;
+				ScriptContainer.textContent += "\r\n" + ScriptList[B].textContent;
 				ScriptList[B].outerHTML = ""; // preventing duplicates; none of standart removing functions work because ScriptList doesn't have parent because it's not in document
 			};
+			TempElem.setOpacity(0); // making transparent to use an effect
 			ActivityContent.appendChild(TempElem);
-			ActivityContent.appendChild(ActivityScript);
+			ActivityContent.appendChild(ScriptContainer);
+			new Effect.Appear(TempElem,{duration:1}); // showing off
 		};
 	};
 };

@@ -65,8 +65,11 @@ Does a few excessive operations, mainly caused by dynamically loaded scripts.
 *ActivityDayLoad()* - reworked version of StartLoadingBlotter(); g_BlotterNextLoadURL is cleared to prevent further loading; Blotter_RemoveDuplicates() removed to prevent hiding duplicates, which may hide an event when sorted by user; uses only requested day as a parameter, with base URL being in the function.
 
 In *ActivityParse()*
+
 1. All screenshot events get additional function call added. That function sets scrollbars where they're needed and originally is called after activity load, but since activity isn't displayed right away and is split, call is added for each event where it might be needed. This may lead to repeated calls & is bit excessive, but the function itself doesn't perform actions which aren't needed, it's better to call it this way then on each event addition, and I couldn't rewrite it to work with not displayed HTML.
+
 2. The activity ending script is parsed, which is originally appended after all activity to replace dynamic (store, community & YouTube) links with actual dynamic content. The replacements, which it should've made, are performed. IMO making all replacements right away, instead of separately for each link on load, is more efficient. Replacement content is also unescaped, because for some reason it isn't on regular addition.
+
 3. All events are parsed & sorted by author ID, and ActivityList is filled. During that, author profile links are cycled through, because their position in page isn't constant depending on the event. Some events contain additional links, which should be skipped. RegExp is used to check for link text - avatar links contain new lines & tabs instead of being empty. \w doesn't work with russian (and any other non-latin language) - apparently, russian doesn't have letters.
 
 *ActivityContentShow()* uses a "hack" to make scripts from activity work. If added as is, they don't trigger, so instead they're removed from activity to separate element and then readded. Main problems I had was with scripts which enable screenshot galleries, but also with responsible for comment input & emoticon selection. They weren't executed after any other way of addition. Though I suspect that I overlooked something.

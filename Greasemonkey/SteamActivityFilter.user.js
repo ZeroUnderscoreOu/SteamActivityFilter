@@ -11,7 +11,6 @@
 // @icon        https://raw.githubusercontent.com/ZeroUnderscoreOu/SteamActivityFilter/master/SteamActivityFilter128.png
 // ==/UserScript==
 
-(function() {
 /*
 SteamActivityFilter userscript 1.2.0
 Written by ZeroUnderscoreOu
@@ -416,4 +415,3 @@ function ActivityContentShow() {
 	};
 };
 ActivityInitialize();
-})();

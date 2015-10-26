@@ -1,7 +1,2 @@
-SteamActivityFilter script license
-This script is licensed under MPL-2.0, with following exceptions:
-	- in case of private use, this project is free for use and modification without any additional mentioning and publishing.
-	- in case of usage of parts of this project in some other public project I should be mentioned in credits and sent a link to the project (so I could use it in stuff like portfolio).
-	- in case of commercial use I should be shared part of the profit with (10% default).
-	- in case of questions about the license I should be contacted.
-In other cases MPL-2.0 should be used.
+SteamActivityFilter userscript license
+This script is licensed under MPL-2.0, with few exceptions: if you use it privately, you're free to keep it private; if you publish something based on it - mention me and let me know; if you earn money on something based on it - contact me & share; if you have questions about the license - contact me. In other cases use MPL-2.0.

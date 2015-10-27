@@ -1,5 +1,5 @@
 /*
-SteamActivityFilter userscript 1.2.0
+SteamActivityFilter userscript 1.2.1
 Written by ZeroUnderscoreOu
 http://steamcommunity.com/id/ZeroUnderscoreOu/
 http://steamcommunity.com/groups/0_oWassup/discussions/3/
@@ -257,7 +257,7 @@ function ActivityDayLoad(LoadingDay) {
 					};
 				},
 				onComplete: function(Data) {
-					if (Data.responseJSON.timestart==LoadingDay) { // loading finished
+					if (Data.request.url.split("start=")[1]==LoadingDay) { // loading finished; Data.responseJSON.timestart doesn't always work
 						new Effect.Fade("blotter_throbber",{duration:0.5});
 					};
 				}

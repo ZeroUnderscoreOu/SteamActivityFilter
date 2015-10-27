@@ -1,50 +1,78 @@
 /*
-SteamActivityFilter script 1.1.0
-04.2015 written by ZeroUnderscoreOu
+SteamActivityFilter userscript 1.2.0
+Written by ZeroUnderscoreOu
 http://steamcommunity.com/id/ZeroUnderscoreOu/
 http://steamcommunity.com/groups/0_oWassup/discussions/3/
+https://github.com/ZeroUnderscoreOu/SteamActivityFilter
 */
 
-//"use strict";
+"use strict";
 
 //ToDo
-// (возможно) переписать перебор массивов и коллекций на forEach
-// (возможно) переименовать ActivityFilter в ActivityForm (некоторые локальные переменные - тоже)
-// (возможно) переименовать ActivityLength в форме и в особенности в ActivityDayLoad()
+// (возможно) переименовать некоторые локальные переменные (в частности, в ActivityCalendarFill())
+// (возможно) переписать new Element() на document.createElement() и $() на document.getElementById()
+// "Seamonkey": "2.37 - 2.41"
 
-var ActivityContent = $("blotter_content"); // activity block
+var ActivityContainer = $("blotter_content"); // activity block
 var ActivityList = {}; // activity list, sorted by author; without explicit assign script crashes on "in" operaton on empty list
 var ActivityDay = new Date(); // current day
-var BaseURL = g_BlotterNextLoadURL.split("ajaxgetusernews")[0]; // profile link; why I didn't use window.location.href from the start?
+//var BaseURL = g_BlotterNextLoadURL.split("ajaxgetusernews")[0]; // depends on fully loaded activity
+//var BaseURL = "http://steamcommunity.com/my/"; // redirects, causes problems with some requests
+var BaseURL = document.location.href.split("home")[0]; // profile link; why I didn't use window.location.href from the start?
+/*
+function ActivityCheck() {
+	if ($("blotter_throbber").visible()) { // if activity is loading
+		var IntervalID = setTimeout(function(){ // I don't fully understand why, but it works only with anonymized function
+			ActivityCheck();
+			clearInterval(IntervalID);
+		},500);
+	} else {
+		ActivityInitialize();
+	};
+};
+*/
 function ActivityInitialize() {
 	var TempElem = new Element("Div"); // variable for temporary elements; div for filter form and additional elements
 	ActivityDay.setHours(0,0,0,0); // activity uses beginning of the day in links
-	TempElem.id = "ActivityDiv";
+	//TempElem.id = "ActivityMainDiv";
 	TempElem.innerHTML = // plain HTML, partly copied from Steam's event setting interface
 		'<Style>'
 			+ '@import "http://steamcommunity-a.akamaihd.net/public/css/skin_1/calendar.css?v=.944VhImsKDKs";'
 			+ '#cal1 {Position:Absolute; Z-Index:10;}'
-			+ '.ActivitySet {Display:Inline-Block; Width:32%; Margin:0; Padding:2px; Border:None;}'
-			+ '.ActivityLabel {Display:Block; Max-Width:200px; Max-Height:1.5em; OverFlow:Hidden;}'
-			+ '.ActivityLeft {Margin-Right:10px; Text-Align:Center;}'
-			+ '.ActivityRight {Margin-Left:10px; Float:Right;}'
-			+ '.ActivityDate {Width:100px;}'
+			+ '.ActivityDiv {Display:Inline-Block; Width:33%; Margin:0px; Padding:0px; Border:None; OverFlow:Hidden; Text-Align:Left;}'
+			+ '.ActivityLabel {Display:Block; White-Space:Pre;}'
+			+ '.ActivityCenter {Text-Align:Center;}'
+			+ '.ActivityStart {Width:100px;}'
 			+ '.ActivityLength {Width:25px;}'
+			+ '.ActivitySpacer {Display:Inline-Block; Min-Width:10px;}'
+			+ '#blotter_throbber {Display:Inline-Block; Position:Fixed; Left:0px; Top:0px; Width:100%; Height:100%; Margin-Top: 0px; Background-Color: RGBA(0,0,0,0.5); Z-Index:500;}' // overriding Steam's style; I don't know why I had to set Z-Index so high
+			+ '.throbber {Position:Relative; Top:250px;}' // also overriding
 		+ '</Style>'
-		+ '<Form ID="ActivityFilter" OnSubmit="return false;">' // activity filter form
-			+ '<FieldSet ID="ActivitySet1" Class="ActivitySet"></FieldSet>'
-			+ '<FieldSet ID="ActivitySet2" Class="ActivitySet"></FieldSet>'
-			+ '<FieldSet ID="ActivitySet3" Class="ActivitySet"></FieldSet>'
-			+ '<Input ID="ActivityDate" Type="Text" Value="Date" Class="ActivityLeft ActivityDate" OnFocus="$(\'cal1\').show();">'
-			+ '<B Class="ActivityLeft">+</B>'
-			+ '<Input ID="ActivityLength" Type="Text" Value="0" Class="ActivityLeft ActivityLength">'
-			+ '<Input Type="Button" Value="Load" OnClick="ActivityDayLoad(ActivityDay.getTime()/1000)" Class="btn_green_white_innerfade btn_small_wide">'
-			+ '<Input Type="Button" Value="Filter" OnClick="ActivityContentShow();" Class="btn_green_white_innerfade btn_small_wide ActivityRight">'
-			+ '<Input Type="Button" Value="Clear" OnClick="ActivityList={};ActivityFilterClear();ActivityContentClear();" Class="btn_darkblue_white_innerfade btn_small_wide ActivityRight">'
-			+ '<Input Type="Button" Value="None" OnClick="ActivityCheckboxes(false);" Class="btn_darkblue_white_innerfade btn_small_wide ActivityRight">'
-			+ '<Input Type="Button" Value="All" OnClick="ActivityCheckboxes(true);" Class="btn_darkblue_white_innerfade btn_small_wide ActivityRight">'
+		+ '<Form ID="ActivityFilter" OnSubmit="ActivityDayLoad(ActivityDay.getTime()/1000);return false;" Class="ActivityCenter">' // activity filter form
+			+ '<Div ID="ActivityDiv1" Class="ActivityDiv"></Div>'
+			+ '<Div ID="ActivityDiv2" Class="ActivityDiv"></Div>'
+			+ '<Div ID="ActivityDiv3" Class="ActivityDiv"></Div>'
+			+ '<Br>'
+			+ '<Div Style="Float:Left;">' // left part; styled through attribute because it's the only element needing this style
+				+ '<Input ID="ActivityStart" Type="Text" Value="Day" Class="ActivityCenter ActivityStart" OnFocus="new Effect.Appear(\'cal1\',{duration:0.5});">'
+				+ '<B> + </B>'
+				+ '<Input ID="ActivityLength" Type="Text" Value="0" Class="ActivityCenter ActivityLength">'
+				+ '<Div Class="ActivitySpacer"></Div>'
+				+ '<Input Type="Submit" Value="Load" Class="btn_green_white_innerfade btn_small_wide">'
+			+ '</Div>'
+			+ '<Div Style="Display:Inline-Block;">' // center part; styled for proper display
+				+ '<Input Type="Button" Value="   All   " OnClick="ActivityCheckboxes(true);" Class="btn_grey_black btn_small_thin">' // spaces to make width similar to "None" button
+				+ '<Div Class="ActivitySpacer"></Div>'
+				+ '<Input Type="Button" Value="None" OnClick="ActivityCheckboxes(false);" Class="btn_grey_black btn_small_thin">'
+			+ '</Div>'
+			+ '<Div Style="Float:Right;">' // right part
+				+ '<Input Type="Button" Value="Clear" OnClick="ActivityList={};ActivityFilterClear();ActivityContentClear();" Class="btn_grey_black btn_small_wide">'
+				+ '<Div Class="ActivitySpacer"></Div>'
+				+ '<Input Type="Button" Value="Filter" OnClick="ActivityContentShow();" Class="btn_green_white_innerfade btn_small_wide">'
+			+ '</Div>'
 		+ '</Form>'
-		+ '<Div ID="cal1">' // calendar template
+		+ '<Br>'
+		+ '<Div ID="cal1" Style="Display:None;">' // calendar template
 			+ '<Div ID="calendarBox_cal1" Class="calendarBox">'
 				+ '<Div ID="monthRow_cal1" Class="monthRow">'
 					+ '<Div ID="monthNav_cal1" Class="monthNav"></Div>'
@@ -69,22 +97,53 @@ function ActivityInitialize() {
 	TempElem.src = "http://steamcommunity-a.akamaihd.net/public/javascript/group_admin_functions.js?v=18ccuSc9Dzhv&l=english";
 	TempElem.type = "Text/JavaScript";
 	TempElem = TempElem.parentElement;
-	ActivityContent.insertBefore(TempElem,ActivityContent.firstChild); // using innerHTML instead doesn't seem to work
-	$("cal1").hide(); // hiding calendar
-	$("ActivityDate").value = ActivityDay.toLocaleDateString(); // filling the day
+	ActivityContainer.insertBefore(TempElem,ActivityContainer.firstChild); // using innerHTML instead doesn't seem to work
+	$("ActivityStart").value = ActivityDay.toLocaleDateString(); // filling the day
 	ActivityCalendarLoad("cal1",parseInt(ActivityDay.getMonth())+1,ActivityDay.getFullYear()); // initializing calendar
 };
-function ActivityCalendarLoad(CalendarID,NewMonth,NewYear) {
+function ActivityCalendarLoad(CalendarID,NewMonth,NewYear,GroupCalendar) {
+	var CalendarURL;
 	var PostData = {
 		"calendarID": CalendarID
+	};
+	if (GroupCalendar) { // using alternative calendar URL
+		CalendarURL = "http://steamcommunity.com/groups/0_oWassup/"; // URL of an awesome group
+	} else {
+		CalendarURL = BaseURL;
 	};
 	if (NewMonth!=undefined&&NewYear!=undefined) {
 		PostData["month"] = NewMonth;
 		PostData["year"] = NewYear;
 	};
-	createQuery2(BaseURL+"events?action=calendarFeed",ActivityCalendarFill,PostData);
+	//createQuery2(CalendarURL+"events?action=calendarFeed",ActivityCalendarFill,PostData);
+	new Ajax.Request(CalendarURL+"events?action=calendarFeed",{ // adding day length in seconds
+		method: "post",
+		parameters: PostData,
+		onSuccess: function(Data) {
+			var Response = Data.responseXML.documentElement;
+			var Results = Response.getElementsByTagName("results")[0].firstChild.nodeValue;
+			if (Results=="OK") { // more checks probably should be here, including for Response
+				ActivityCalendarFill(Response);
+			} else {
+				MessageDialog.Show(Results,"Error");
+			};
+		},
+		onFailure: function(Data) {
+			if (!GroupCalendar) { // checking if already using alternative variant
+				new Effect.Highlight("ActivityStart"); // indicating an error loading calendar
+				ActivityCalendarLoad(CalendarID,NewMonth,NewYear,true); // trying alternative
+			} else {
+				if (Data.responseText) {
+					MessageDialog.Show(Data.responseText,Data.statusText);
+				} else {
+					MessageDialog.Show("Couldn't load calendar.",Data.statusText);
+				};
+			};
+		}
+	});
 };
-function ActivityCalendarFill() {
+function ActivityCalendarFill(Response) {
+/*
 	if (req.readyState==4) {
 		if (req.status==200) {
 			var Response = req.responseXML.documentElement;
@@ -94,96 +153,112 @@ function ActivityCalendarFill() {
 				alert(Results);
 				return;
 			};
-			var CalendarID = Response.getElementsByTagName("calendarID")[0].firstChild.nodeValue;
-			document.getElementById("monthNav_"+CalendarID).innerHTML = Response.getElementsByTagName("monthNav")[0].firstChild.nodeValue.replace(/calChangeMonth/g,"ActivityCalendarLoad"); // changing to local function
-			document.getElementById("monthTitle_"+CalendarID).innerHTML = Response.getElementsByTagName("monthTitle")[0].firstChild.nodeValue;
-			var DayDiv = document.getElementById("days_"+CalendarID);
-			while (DayDiv.childNodes.length>0) {
-				DayDiv.removeChild(DayDiv.childNodes[0]);
-			};
-			var NewDays = Response.getElementsByTagName("day");
-			var C = 0;
-			for (var X=0;X<NewDays.length;X++) {
-				if (C==7) {
-					C = 0;
-					var Breaker = new Element("Br");
-					Breaker.clear = "Left";
-					DayDiv.appendChild(Breaker);
-				};
-				var Day = new Element("A");
-				Day.id = NewDays[X].getAttribute("linkID");
-				Day.className = NewDays[X].getAttribute("cssClass").replace("noRollover",""); // removing hover style blocking
-				//Day.href = NewDays[X].getAttribute("link");
-				Day.href = 'javascript:ActivityDaySet("' + Day.id + '","' + CalendarID + '");'; // using own function
-				var DayNum = document.createTextNode(NewDays[X].firstChild.nodeValue);
-				Day.appendChild(DayNum);
-				DayDiv.appendChild(Day);
-				C++; // Delphi is better
-			};
-			setupCalRollovers();
 		};
 	};
+*/
+	var CalendarID = Response.getElementsByTagName("calendarID")[0].firstChild.nodeValue;
+	var HTMLDays = document.getElementById("days_"+CalendarID);
+	var XMLDays = Response.getElementsByTagName("day");
+	var C = 0;
+	document.getElementById("monthNav_"+CalendarID).innerHTML = Response.getElementsByTagName("monthNav")[0].firstChild.nodeValue.replace(/calChangeMonth/g,"ActivityCalendarLoad"); // changing to local function
+	document.getElementById("monthTitle_"+CalendarID).innerHTML = Response.getElementsByTagName("monthTitle")[0].firstChild.nodeValue;
+	while (HTMLDays.childNodes.length>0) {
+		HTMLDays.removeChild(HTMLDays.childNodes[0]);
+	};
+	for (var X=0;X<XMLDays.length;X++) {
+		if (C==7) {
+			C = 0;
+			var Breaker = new Element("Br");
+			Breaker.clear = "Left";
+			HTMLDays.appendChild(Breaker);
+		};
+		var NewDay = new Element("A");
+		NewDay.textContent = XMLDays[X].firstChild.nodeValue;
+		NewDay.id = XMLDays[X].getAttribute("linkID");
+		NewDay.className = XMLDays[X].getAttribute("cssClass").replace("noRollover",""); // removing hover style blocking
+		NewDay.onclick = ActivityDaySet.bind(NewDay.id); // using own function, binding the clicked day ID
+		HTMLDays.appendChild(NewDay);
+		C++; // Delphi is better
+	};
+	setupCalRollovers();
 };
-function ActivityDaySet(LocDay,LocCalendar) {
-	var TempID = LocDay.replace(LocCalendar+"_","").split("/"); // getting day from ID
-	var TempDate = new Date("20".concat(TempID[2]),TempID[0]-1,TempID[1]);
-	ActivityDay.setTime(TempDate.getTime()); // recording day
-	$("ActivityDate").value = TempDate.toLocaleDateString();
-	$(LocCalendar).hide(); // hiding after day select
+function ActivityDaySet() {
+	var CalendarID = this.split("_"); // day ID, containing calendar ID & date
+	var ThisDay = CalendarID[1].split("/"); // getting date
+	CalendarID = CalendarID[0]; // getting calendar ID
+	ThisDay = new Date("20"+ThisDay[2],ThisDay[0]-1,ThisDay[1]); // turning into date object
+	ActivityDay.setTime(ThisDay.getTime()); // recording day
+	$("ActivityStart").value = ThisDay.toLocaleDateString();
+	new Effect.Fade(CalendarID,{duration:0.5}); // hiding after day select
 };
 function ActivityFilterClear() {
-	var TempElem = ActivityContent.getElementsByClassName("ActivitySet");
+	var TempElem = ActivityContainer.getElementsByClassName("ActivityDiv");
 	for (var A=0;A<TempElem.length;A++) { // clearing filter form before filling
-		TempElem[A].innerHTML = "";
-		/*
-		while (TempElem[A].children.length>0) {
-			TempElem[A].removeChild(TempElem[A].lastElementChild);
-		};
-		*/
+		TempElem[A].innerHTML = ""; // faster then removing elements separately
 	};
 };
 function ActivityContentClear() {
-	for (var A=ActivityContent.childNodes.length-1;A>=0;A--) {
-		var B = ActivityContent.childNodes[A].id;
-		if (B=="blotter_statuspost_form"||B=="ActivityDiv") { // keeping post form & filter
-			continue;
-		} else {
-			ActivityContent.removeChild(ActivityContent.childNodes[A]);
-		};
+	var TempElem = ActivityContainer.getElementsByClassName("blotter_day");
+	while (TempElem.length>0) {
+		/*
+		new Effect.Fade(TempElem[0],{duration:0.5}); // bit excessive, but swag
+		var IntervalID = setTimeout(function(){ // too bad it conflicts with showing swag because of asynchrony
+			ActivityContainer.removeChild(this);
+			clearInterval(IntervalID);
+		}.bind(TempElem[0]),1000);
+		*/
+		TempElem[0].parentElement.removeChild(TempElem[0]); // ActivityContainer contains all found elements but is not always their direct parent
 	};
 };
 function ActivityCheckboxes(TargetState) {
-	var FilterForm = $("ActivityFilter").getElementsByClassName("ActivityCheckbox");
-	for (var A=0;A<FilterForm.length;A++) { // setting all filter checkboxes to the passed state if they're not already
-		if (FilterForm[A].checked!=TargetState) {
-			FilterForm[A].checked = TargetState;
+	var Checkboxes = $("ActivityFilter").getElementsByClassName("ActivityCheckbox");
+	for (var A=0;A<Checkboxes.length;A++) { // setting all filter checkboxes to the passed state if they're not already
+		if (Checkboxes[A].checked!=TargetState) {
+			Checkboxes[A].checked = TargetState;
 		};
 	};
 };
-function ActivityDayLoad(LocDate) {
-	var ActivityLength = parseInt($("ActivityLength").value);
-	if (isNaN(ActivityLength)) { // if wrong ammount of days
+function ActivityDayLoad(LoadingDay) {
+	var Period = parseInt($("ActivityLength").value);
+	if (isNaN(Period)) { // if wrong ammount of days
 		new Effect.Highlight("ActivityLength"); // flashy!
 		$("ActivityLength").value = 0;
 	} else {
-		if (ActivityLength<0) {
-			ActivityLength = Math.abs(ActivityLength);
-			LocDate -= ActivityLength * 86400; // decreasing begin date by day difference
+		new Effect.Appear("blotter_throbber",{duration:0.5}); // loading indicator
+		if (Period<0) {
+			Period = Math.abs(Period);
+			LoadingDay -= Period * 86400; // decreasing begin date by difference in days
 		};
-		for (ActivityLength;ActivityLength>=0;ActivityLength--) {
-			console.log(new Date((LocDate+86400*ActivityLength)*1000).toString(),BaseURL+"ajaxgetusernews/?start="+(LocDate+86400*ActivityLength).toString());
-			//BaseURL+"ajaxgetusernews/?start="+(LocDate+86400*ActivityLength*(ActivityLength>0?+1:-1)).toString() // condition is the same as ActivityLength/ActivityLength*-1
-			new Ajax.Request(BaseURL+"ajaxgetusernews/?start="+(LocDate+86400*ActivityLength).toString(),{ // adding ammount of seconds in a day
+		for (Period;Period>=0;Period--) {
+			console.log(new Date((LoadingDay+86400*Period)*1000).toString(),BaseURL+"ajaxgetusernews/?start="+(LoadingDay+86400*Period).toString());
+			//BaseURL+"ajaxgetusernews/?start="+(LoadingDay+86400*Period*(Period>0?+1:-1)).toString() // condition is the same as Period/Period*-1
+			new Ajax.Request(BaseURL+"ajaxgetusernews/?start="+(LoadingDay+86400*Period).toString(),{ // adding day length in seconds
 				insertion: Insertion.Bottom,
-				method: "Get",
+				method: "get",
 				onSuccess: function(Data) {
-					RecordAJAXPageView(Data.request.url);
 					var Response = Data.responseJSON;
 					if (Response&&Response.success==true&&Response.blotter_html) {
 						g_BlotterNextLoadURL = null; // preventing loading on scrolling
 						ActivityParse(Response.blotter_html); // parsing each day separately
-					} else if (!Response) {
-						ActivityContent.insert({bottom:Data.responseText});
+					} else if (Data.responseText) {
+						ActivityContainer.insert({bottom:Data.responseText});
+					} else {
+						MessageDialog.Show("Couldn't load activity.",Data.statusText);
+					};
+				},
+				onFailure: function(Data) {
+					var Response = Data.responseJSON;
+					if (Response&&Response.message) {
+						ActivityContainer.insert({bottom:Response.message});
+					} else if (Data.responseText) {
+						ActivityContainer.insert({bottom:Data.responseText});
+					} else {
+						MessageDialog.Show("Couldn't load activity.",Data.statusText);
+					};
+				},
+				onComplete: function(Data) {
+					if (Data.responseJSON.timestart==LoadingDay) { // loading finished
+						new Effect.Fade("blotter_throbber",{duration:0.5});
 					};
 				}
 			});
@@ -195,140 +270,134 @@ function ActivityParse(ContentHTML) {
 	var EventType;
 	var EventLink;
 	var EventContainer = new Element("Div"); // container element for activity
-	var EventLinks; // don't confuse with EventLink - former contains dynamic links & latter - link to event author
+	var EventElements;
 	var EventScripts;
 	var TempElem;
 	EventContainer.innerHTML = ContentHTML; // enabling element functions
 	//EventContainer.update(ContentHTML); update() doesn't fit, because it removes scripts from HTML
-	EventScripts = Array.prototype.slice.call(EventContainer.getElementsByClassName("highlight_strip_scroll")); // screenshot galleries' preview panel
-	EventScripts.forEach(function(EachMatch){
-		TempElem = new Element("Script");
-		TempElem.textContent = "Blotter_AddHighlightSliders();"; // function setting scrollbars; may lead to repeated calls, but still better then calling on each event addition
-		EachMatch.appendChild(TempElem);
-	});
-	EventLinks = Array.prototype.slice.call(EventContainer.getElementsByClassName("bb_link")); // transforming HTMLCollection to array
-	EventLinks = EventLinks.filter(function(FilterMatch){return /dynamiclink_\d+/.test(FilterMatch.id)}); // filtering only replaced links by corresponding IDs
+	EventElements = [].slice.call(EventContainer.getElementsByClassName("bb_link")); // transforming HTMLCollection to array
+	EventElements = EventElements.filter(function(Match){return /dynamiclink_\d+/.test(Match.id)}); // filtering only replaced links by corresponding IDs
 	EventScripts = EventContainer.getElementsByTagName("Script");
 	EventScripts = EventScripts[EventScripts.length-1]; // last script, appended at the end of activity; contains dynamic link replacing functions; bit risky to access it by order
 	EventContainer = EventContainer.getElementsByClassName("blotter_block"); // all events
-	EventScripts.textContent = EventScripts.textContent.replace( // searching for dynamic contents replacing functions and performing replacemnts
-		/ReplaceDynamicLink\(\s*[^\\](')dynamiclink_(\d+)\1,\s*[^\\](\")(.*?)\3\s*\);/gi, // unescaped single/double quotes and contents of them
-		function(SearchMatch,B1,B2,B3,B4,SearchOffset,SearchString){ // only B2 & B4 (bracket 2 & bracket 4) are needed - serial number & element contents
-			//console.log("SearchMatch \r\n",SearchMatch);
-			B4 = B4.replace(/\\(['\"\/])/g,"$1"); // simple unescape regexp
-			B4 = B4.replace(/\\u(\d+)/g,function(SearchMatch,B1,SearchOffset,SearchString){return "&#"+parseInt(B1,16)+";";}); // bit more complicated regexp, for unicode symbol codes
-			EventLinks[B2].outerHTML = B4.replace(/\\r/g,"&#13;").replace(/\\n/g,"&#10;").replace(/\\t/g,"&#09;"); // for some reason JS special characters aren't interpreted
-			return ""; // erasing found function
-		}
-	);
+	if (EventScripts&&/ReplaceDynamicLink/.test(EventScripts.textContent)) { // ending script is not always present
+		EventScripts.textContent = EventScripts.textContent.replace( // searching for dynamic contents replacing functions and performing replacemnts
+			/ReplaceDynamicLink\(\s*[^\\](')dynamiclink_(\d+)\1,\s*[^\\](\")(.*?)\3\s*\);/gi, // unescaped single/double quotes and contents of them
+			function(Match,B1,B2,B3,B4,Offset,Variable){ // only B2 & B4 (bracket 2 & bracket 4) are needed - serial number & element contents
+				B4 = B4.replace(/\\u(\d+)/g,function(Match,B1,Offset,Variable){return "&#"+parseInt(B1,16)+";";}); // bit complicated regexp, for unicode symbol codes
+				B4 = B4.replace(/\\r/g,"&#13;").replace(/\\n/g,"&#10;").replace(/\\t/g,"&#09;"); // carriage return, new line & tab
+				EventElements[B2].outerHTML = B4.replace(/\\(.)/g,"$1"); // simple unescape
+				return ""; // erasing found function
+			}
+		);
+	};
 	/* same as above replacement, but separately for each match instead of global
-	EventLinks.forEach(function(EachMatch){
+	EventElements.forEach(function(Match){
 		EventScripts.textContent = EventScripts.textContent.replace(
-			new RegExp("ReplaceDynamicLink\\(\\s*[^\\\\](['\"])"+EachMatch.id+"\\1,\\s*[^\\\\](['\"])(.*?)\\2\\s*\\);","i"), // too much escaping
-			function(SearchMatch,B1,B2,B3,SearchOffset,SearchString){
+			new RegExp("ReplaceDynamicLink\\(\\s*[^\\\\](['\"])"+Match.id+"\\1,\\s*[^\\\\](['\"])(.*?)\\2\\s*\\);","i"), // too much escaping
+			function(Match,B1,B2,B3,Offset,Variable){
 				B3 = B3.replace(/\\(['\"\/])/g,"$1");
-				EachMatch.outerHTML = B3.replace(/\\r/g,"&#13;").replace(/\\n/g,"&#10;").replace(/\\t/g,"&#09;");
+				Match.outerHTML = B3.replace(/\\r/g,"&#13;").replace(/\\n/g,"&#10;").replace(/\\t/g,"&#09;");
 				return "";
 			}
 		);
 	});
 	*/
-	for (var A=EventContainer.length-1;A>=0;A--) { // appendChild() doesn't remove elements here, but still
-		if (EventContainer[A].getElementsByClassName("blotter_author_block").length>0) { // event header
-			TempElem = EventContainer[A].getElementsByClassName("blotter_author_block")[0].getElementsByTagName("A");
-			for (var B=0;B<TempElem.length;B++) { // cycling through found links
-				if ((TempElem[B].href.indexOf("/id/")!=-1||TempElem[B].href.indexOf("/profiles/")!=-1)&&/\S/.test(TempElem[B].textContent)) { // checking for link text
-					EventAuthor = TempElem[B].textContent;
+	while (EventContainer.length>0) { // appendChild() doesn't remove elements here, but still
+		if (EventContainer[0].getElementsByClassName("blotter_author_block").length>0) { // event header
+			TempElem = EventContainer[0].getElementsByClassName("blotter_author_block")[0].getElementsByTagName("A");
+			for (var A=0;A<TempElem.length;A++) { // cycling through found links
+				if ((TempElem[A].href.indexOf("/id/")!=-1||TempElem[A].href.indexOf("/profiles/")!=-1)&&/\S/.test(TempElem[A].textContent)) { // checking for link text
+					EventAuthor = TempElem[A].textContent;
 					EventType = "Player";
-					EventLink = TempElem[B].href;
+					EventLink = TempElem[A].href;
 					break;
 				};
 			};
-		} else if (EventContainer[A].getElementsByClassName("blotter_group_announcement_header").length>0) {
-			TempElem = EventContainer[A].getElementsByClassName("blotter_group_announcement_header")[0].getElementsByTagName("A");
-			for (var B=0;B<TempElem.length;B++) {
-				if (TempElem[B].href.indexOf("/groups/")!=-1&&/\S/.test(TempElem[B].textContent)) {
-					EventAuthor = TempElem[B].textContent;
+		} else if (EventContainer[0].getElementsByClassName("blotter_group_announcement_header").length>0) {
+			TempElem = EventContainer[0].getElementsByClassName("blotter_group_announcement_header")[0].getElementsByTagName("A");
+			for (var A=0;A<TempElem.length;A++) {
+				if (TempElem[A].href.indexOf("/groups/")!=-1&&/\S/.test(TempElem[A].textContent)) {
+					EventAuthor = TempElem[A].textContent;
 					EventType = "Group";
-					EventLink = TempElem[B].href;
+					EventLink = TempElem[A].href;
 					break;
 				};
 			};
-		} else if (EventContainer[A].getElementsByClassName("blotter_group_announcement_header_ogg").length>0) {
-			TempElem = EventContainer[A].getElementsByClassName("blotter_group_announcement_header_ogg")[0].getElementsByTagName("A");
-			for (var B=0;B<TempElem.length;B++) {
-				if (TempElem[B].href.indexOf("/games/")!=-1&&/\S/.test(TempElem[B].textContent)) {
-					EventAuthor = TempElem[B].textContent;
+		} else if (EventContainer[0].getElementsByClassName("blotter_group_announcement_header_ogg").length>0) {
+			TempElem = EventContainer[0].getElementsByClassName("blotter_group_announcement_header_ogg")[0].getElementsByTagName("A");
+			for (var A=0;A<TempElem.length;A++) {
+				if (TempElem[A].href.indexOf("/games/")!=-1&&/\S/.test(TempElem[A].textContent)) {
+					EventAuthor = TempElem[A].textContent;
 					EventType = "Game";
-					EventLink = TempElem[B].href;
+					EventLink = TempElem[A].href;
 					break;
 				};
 			};
-		} else if (EventContainer[A].getElementsByClassName("blotter_daily_rollup").length>0) { // achievements & stuff
+		} else if (EventContainer[0].getElementsByClassName("blotter_daily_rollup").length>0) { // achievements & stuff
 			EventAuthor = "Gabe Newell Daily"; // daily news from Gabe
 			EventType = "Daily";
 			EventLink = "http://steamcommunity.com/id/gabelogannewell";
 			//EventAuthor = 22202;
 		} else { // checking for unsorted, still not sure if script works with all events
-			console.log("Unsorted activity",A.toString());
-			console.log(EventContainer[A].outerHTML);
+			console.log("Unsorted activity\r\n",EventContainer[0].outerHTML);
 		};
 		TempElem = EventLink.split("/"); // getting ID from link
 		TempElem = TempElem[TempElem.length-1];
 		if (TempElem.length<3) {alert("Link is too short ("+EventLink+").");}; // just to check that none of the links end with a slash
 		if (!(TempElem in ActivityList)) {
-			/*
-			ActivityList[TempElem] = {}; // initializing
-			ActivityList[TempElem].Content = new Element("Div");
-			ActivityList[TempElem].Name = EventAuthor;
-			ActivityList[TempElem].Type = EventType;
-			*/
 			ActivityList[TempElem] = {
 				"Name": EventAuthor,
 				"Type": EventType,
 				"Content": new Element("Div")
 			};
+			ActivityList[TempElem]["Content"].className = "blotter_day"; // for easier access to shown divs
+			ActivityList[TempElem]["Content"].hide(); // hiding to use an effect later
 		};
-		ActivityList[TempElem].Content.appendChild(EventContainer[A]);
+		EventElements = EventContainer[0].getElementsByTagName("Script");
+		EventScripts = new Element("Script");
+		while (EventElements.length>0) { // hack to make scripts work - removing them from activity element and readding
+			EventScripts.textContent += "\r\n" + EventElements[0].textContent;
+			EventElements[0].parentElement.removeChild(EventElements[0]); // preventing duplicates; EventContainer[0] is not always direct parent
+			//EventElements[0].outerHTML = ""; // another variant of removing the script
+		};
+		EventContainer[0].appendChild(EventScripts); // readding
+		ActivityList[TempElem]["Content"].appendChild(EventContainer[0]);
 	};
 	ActivityFilterShow();
 };
 function ActivityFilterShow() {
-	var SetNumber = 1; // used for switching between FieldSets
+	var SetNumber = 1; // used for switching between divs
 	var TempElem;
 	ActivityFilterClear(); // preventing duplicates
 	for (var LocName in ActivityList) { // creating elements for filter form
-		TempElem = new Element("Label"); // label with name
+		TempElem = new Element("Label"); // label with author's name
 		TempElem.className = "ActivityLabel"; // for CSS
-		TempElem.textContent = ActivityList[LocName].Name;
+		TempElem.textContent = ActivityList[LocName]["Name"];
 		TempElem = TempElem.insertBefore(new Element("Input"),TempElem.firstChild); // checkbox with ID
 		TempElem.type = "Checkbox";
 		TempElem.value = LocName;
 		TempElem.className = "ActivityCheckbox"; // for easier access to checkboxes
-		$("ActivitySet"+SetNumber.toString()).appendChild(TempElem.parentElement);
+		$("ActivityDiv"+SetNumber.toString()).appendChild(TempElem.parentElement);
 		SetNumber++; // switching to next set
-		if (SetNumber>ActivityContent.getElementsByClassName("ActivitySet").length) {SetNumber=1}; // wrapping around
+		if (SetNumber>ActivityContainer.getElementsByClassName("ActivityDiv").length) {SetNumber=1}; // wrapping around
 	};
 };
 function ActivityContentShow() {
-	var FilterForm = $("ActivityFilter").getElementsByClassName("ActivityCheckbox"); // all filter checkboxes
+	var Checkboxes = $("ActivityFilter").getElementsByClassName("ActivityCheckbox"); // all filter checkboxes
 	var TempElem;
 	ActivityContentClear();
-	for (var A=0;A<FilterForm.length;A++) {
-		if (FilterForm[A].checked) { // checking for checked checkboxes
-			//TempElem = ActivityList[FilterForm[A].value].Content.clone(true); // true for deep cloning; turns out cloning was unneeded
-			TempElem = ActivityList[FilterForm[A].value].Content;
-			TempElem = new Element("Div").update(ActivityList[FilterForm[A].value].Content);
-			var ScriptList = TempElem.getElementsByTagName("Script");
-			var ScriptContainer = new Element("Script");
-			for (var B=ScriptList.length-1;B>=0;B--) { // hack to make scripts work - removing them from activity element and readding
-				ScriptContainer.textContent += "\r\n" + ScriptList[B].textContent;
-				ScriptList[B].outerHTML = ""; // preventing duplicates; none of standart removing functions work because ScriptList doesn't have parent because it's not in document
+	for (var A=0;A<Checkboxes.length;A++) {
+		if (Checkboxes[A].checked) { // checking for checked checkboxes
+			TempElem = ActivityList[Checkboxes[A].value]["Content"].clone(true); // true for deep cloning; turns out cloning isn't actually necessary
+			if (TempElem.getElementsByClassName("highlight_strip_scroll").length>0) { // checking for screenshot galleries' preview panel
+				var IntervalID = setTimeout(function(){
+					Blotter_AddHighlightSliders(); // setting scrollbars for it after the effect (panel should be visible)
+					clearInterval(IntervalID);
+				},1000);
 			};
-			TempElem.setOpacity(0); // making transparent to use an effect
-			ActivityContent.appendChild(TempElem);
-			ActivityContent.appendChild(ScriptContainer);
-			new Effect.Appear(TempElem,{duration:1}); // showing off
+			ActivityContainer.appendChild(TempElem);
+			new Effect.Appear(TempElem,{duration:0.5}); // showing off
 		};
 	};
 };

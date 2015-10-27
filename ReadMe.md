@@ -106,7 +106,7 @@ Order & actions of functions:
 
 	- displaying filtered activity
 
-*ActivityList* contains activity, sorted by author's ID; activity is stored in a nested field instead of root so not to write additional data into HTML elements. Fields are .Content for activity itself, .Name for author's name & .Type for activity type.
+*ActivityList* contains activity, sorted by author's ID; activity is stored in a nested field instead of root so not to write additional data into HTML elements. Fields are "Content" for activity itself, "Name" for author's name & "Type" for activity type.
 
 *BaseURL* is used for links for profile related resources; originally it was got from g_BlotterNextLoadURL, because http://steamcommunity.com/my/ & http://steamcommunity.com/profiles/ doesn't work with the calendar - probably because of the redirect, if requested with post method, current month is always returned (parameters aren't passed after redirect), so it either should be get method or non-redirecting URL. These URLs are more cool, but I switched to window.location.href.
 
@@ -118,7 +118,7 @@ At some point I used *ActivityCheck()*, which was checking if any activity is cu
 
 *ActivityCalendarFill()* - reworked version of calChangeReceive(). Originally was called through XML request in ActivityCalendarLoad() and had access to request's inner variables; now called directly and is passed response data through parameter. Month navigation links are changed; HRef isn't assigned to day elements; function call is assigned through anonymous OnClick handler with bound this instead of JavaScript protocol; new Element() is used instead of document.createElement(). Probably will change or add an option for week start.
 
-*ActivityDayLoad()* - reworked version of StartLoadingBlotter(). g_BlotterNextLoadURL is cleared to prevent further loading; Blotter_RemoveDuplicates() removed to prevent hiding duplicates, which may hide an event when sorted by user; RecordAJAXPageView removed because Google spying. Uses only requested day as a parameter, with base URL being in the function.
+*ActivityDayLoad()* - reworked version of StartLoadingBlotter(). g_BlotterNextLoadURL is cleared to prevent further loading; Blotter_RemoveDuplicates() removed to prevent hiding duplicates, which may hide an event when sorted by user; RecordAJAXPageView removed because Google spying. Uses only requested day as a parameter, with base URL being in the function. Activity is loaded in a loop with a separate iteration for each day. Theoretically, I could use Data.responseJSON.next_request instead of changing the request URL, but it would requre for each previous request to load before making next.
 
 In *ActivityParse()*:
 

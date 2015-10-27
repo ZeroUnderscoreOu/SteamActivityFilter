@@ -14,7 +14,7 @@ https://github.com/ZeroUnderscoreOu/SteamActivityFilter
 // @namespace   https://github.com/ZeroUnderscoreOu/
 // @downloadURL https://raw.githubusercontent.com/ZeroUnderscoreOu/SteamActivityFilter/master/Greasemonkey/SteamActivityFilter.user.js
 // @updateURL   https://raw.githubusercontent.com/ZeroUnderscoreOu/SteamActivityFilter/master/Greasemonkey/SteamActivityFilter.user.js
-// @include     http://steamcommunity.com/*/home/
+// @include     *://steamcommunity.com/*/home*
 // @run-at      document-end
 // @grant       GM_getResourceText
 // @icon        https://raw.githubusercontent.com/ZeroUnderscoreOu/SteamActivityFilter/master/SteamActivityFilter128.png

@@ -1,10 +1,10 @@
 {
 	"name": "steamactivityfilter",
 	"title": "Steam Activity Filter",
-	"description": "Filter for friends' activity in Steam. Allows to load activity for selected days and display needed part of it.",
 	"author": "ZeroUnderscoreOu",
-	"version": "1.2.0",
+	"version": "1.2.2",
 	"homepage": "http://steamcommunity.com/groups/0_oWassup/discussions/3/",
+	"description": "Filter for friends' activity in Steam. Allows to load activity for selected days and display needed part of it.",
 	"license": "MPL-2.0 with exceptions (https://raw.githubusercontent.com/ZeroUnderscoreOu/SteamActivityFilter/master/License.txt)",
 	"main": "index.js",
 	"engines": {

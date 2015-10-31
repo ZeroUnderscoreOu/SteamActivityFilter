@@ -2,21 +2,16 @@
 
 Written by **ZeroUnderscoreOu**
 
-#### Steam:
+#### Contacts
+[Profile](http://steamcommunity.com/id/ZeroUnderscoreOu/) /
+[Group](http://steamcommunity.com/groups/0_oWassup/) /
+[Forum](http://steamcommunity.com/groups/0_oWassup/discussions/3/) /
+[GitHub](https://github.com/ZeroUnderscoreOu/SteamActivityFilter)
 
-http://steamcommunity.com/id/ZeroUnderscoreOu/
-
-#### Group:
-
-http://steamcommunity.com/groups/0_oWassup/
-
-#### Forum:
-
-http://steamcommunity.com/groups/0_oWassup/discussions/3/
-
-#### GitHub:
-
-https://github.com/ZeroUnderscoreOu/SteamActivityFilter
+#### Versions
+[Greasemonkey](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Greasemonkey) /
+[Firefox](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Firefox) /
+[Chrome & Opera](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Chrome&Opera)
 
 
 
@@ -42,7 +37,7 @@ Filter for friends' activity in Steam. Allows to load activity for selected days
 
 - Click on the "Clear" button to clear activity.
 
-Loaded activity stacks, so several days can be consequently loaded and veiwed together.
+Loaded activity stacks until cleared, so several days can be consequently loaded and veiwed together.
 
 
 
@@ -53,6 +48,8 @@ May lead to memory overload, particularly due to cloning.
 May skip some activity (which I haven't encountered).
 
 Does few excessive operations, particularly due to dynamically loaded scripts.
+
+Events are duplicated if same day is loaded several times (as loaded activity stacks).
 
 Steam's calendar, and, thus, script itself isn't intended to work with any century other then current 21st (year is stored in two digit format).
 
@@ -118,7 +115,7 @@ At some point I used *ActivityCheck()*, which was checking if any activity is cu
 
 *ActivityCalendarFill()* - reworked version of calChangeReceive(). Originally was called through XML request in ActivityCalendarLoad() and had access to request's inner variables; now called directly and is passed response data through parameter. Month navigation links are changed; HRef isn't assigned to day elements; function call is assigned through anonymous OnClick handler with bound this instead of JavaScript protocol; new Element() is used instead of document.createElement(). Probably will change or add an option for week start.
 
-*ActivityDayLoad()* - reworked version of StartLoadingBlotter(). g_BlotterNextLoadURL is cleared to prevent further loading; Blotter_RemoveDuplicates() removed to prevent hiding duplicates, which may hide an event when sorted by user; RecordAJAXPageView removed because Google spying. Uses only requested day as a parameter, with base URL being in the function. Activity is loaded in a loop with a separate iteration for each day. Theoretically, I could use Data.responseJSON.next_request instead of changing the request URL, but it would requre for each previous request to load before making next.
+*ActivityDayLoad()* - reworked version of StartLoadingBlotter(). g_BlotterNextLoadURL is cleared to prevent further loading; Blotter_RemoveDuplicates() removed to prevent hiding duplicates, which may hide an event when sorted by user; RecordAJAXPageView removed because Google spying. Uses only requested day as a parameter, with base URL being in the function. Activity is loaded in a loop with a separate iteration for each day. If there's no activity, sometimes Steam returns day different from selected (usually previous). Because of this, I added a check for time between Data.request.url and Data.responseJSON.timestart. The former is also used to check when loop gets to the last URL. Originally I used the latter, but switched because of returned day mismatch. Theoretically, I could use Data.responseJSON.next_request instead of changing the request URL, but it would requre for each previous request to load before making next.
 
 In *ActivityParse()*:
 
@@ -137,5 +134,7 @@ All cycles which removeChild() from cycled or appendChild() to another object go
 Partly due to asynchronous work of data loading, functions are chained for them to work when data is really loaded.
 
 If there's no activity for a particular day, that day returns an error instead of empty content and it and consequtive days aren't loaded.
+
+Scripts don't trigger for duplicated events, so only first event would have for example working comment field. I suspect it's caused by related scripts triggering only for first found element.
 
 In the original verions of script, all displayed activity was cloned, but it turned out that adding it to the page doesn't remove it from ActivityList as I thought. Still, this data might get doubled because of being both on the page & in ActivityList, I'm not sure about that. Also, data in ActivityList is kept constantly during the work (until cleared by user), while displayed data is cleared on any new filtering. Depending on the ammount of activity & number of days, that may be pretty heavy.

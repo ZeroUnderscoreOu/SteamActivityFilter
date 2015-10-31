@@ -2,9 +2,16 @@
 
 Written by **ZeroUnderscoreOu**
 
-#### [Profile](http://steamcommunity.com/id/ZeroUnderscoreOu/) / [Group](http://steamcommunity.com/groups/0_oWassup/) / [Forum](http://steamcommunity.com/groups/0_oWassup/discussions/3/) / [GitHub](https://github.com/ZeroUnderscoreOu/SteamActivityFilter)
+#### Contacts
+[Profile](http://steamcommunity.com/id/ZeroUnderscoreOu/) /
+[Group](http://steamcommunity.com/groups/0_oWassup/) /
+[Forum](http://steamcommunity.com/groups/0_oWassup/discussions/3/) /
+[GitHub](https://github.com/ZeroUnderscoreOu/SteamActivityFilter)
 
-#### [Source](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/SteamActivityFilter.js) / [Greasemonkey](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Greasemonkey/SteamActivityFilter.user.js) / [Firefox](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Firefox/%40steamactivityfilter-1.2.0.xpi) / [Chrome & Opera]()
+#### Versions
+[Greasemonkey](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Greasemonkey) /
+[Firefox](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Firefox) /
+[Chrome & Opera](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Chrome&Opera)
 
 
 

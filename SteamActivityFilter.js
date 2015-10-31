@@ -1,5 +1,5 @@
 /*
-SteamActivityFilter userscript 1.2.1
+SteamActivityFilter userscript 1.2.2
 Written by ZeroUnderscoreOu
 http://steamcommunity.com/id/ZeroUnderscoreOu/
 http://steamcommunity.com/groups/0_oWassup/discussions/3/
@@ -9,8 +9,9 @@ https://github.com/ZeroUnderscoreOu/SteamActivityFilter
 "use strict";
 
 //ToDo
-// (возможно) переименовать некоторые локальные переменные (в частности, в ActivityCalendarFill())
 // (возможно) переписать new Element() на document.createElement() и $() на document.getElementById()
+// (возможно) перенести SetNumber++ в условие с префиксной записью
+// (возможно) добавить сортировку по алфавиту
 // "Seamonkey": "2.37 - 2.41"
 
 var ActivityContainer = $("blotter_content"); // activity block
@@ -22,7 +23,7 @@ var BaseURL = document.location.href.split("home")[0]; // profile link; why I di
 /*
 function ActivityCheck() {
 	if ($("blotter_throbber").visible()) { // if activity is loading
-		var IntervalID = setTimeout(function(){ // I don't fully understand why, but it works only with anonymized function
+		var IntervalID = setTimeout(function() { // I don't fully understand why, but it works only with anonymized function
 			ActivityCheck();
 			clearInterval(IntervalID);
 		},500);
@@ -125,7 +126,7 @@ function ActivityCalendarLoad(CalendarID,NewMonth,NewYear,GroupCalendar) {
 			if (Results=="OK") { // more checks probably should be here, including for Response
 				ActivityCalendarFill(Response);
 			} else {
-				MessageDialog.Show(Results,"Error");
+				alert("Error\r\n"+Results);
 			};
 		},
 		onFailure: function(Data) {
@@ -134,9 +135,9 @@ function ActivityCalendarLoad(CalendarID,NewMonth,NewYear,GroupCalendar) {
 				ActivityCalendarLoad(CalendarID,NewMonth,NewYear,true); // trying alternative
 			} else {
 				if (Data.responseText) {
-					MessageDialog.Show(Data.responseText,Data.statusText);
+					alert(Data.statusText+"\r\n"+Data.responseText);
 				} else {
-					MessageDialog.Show("Couldn't load calendar.",Data.statusText);
+					alert(Data.statusText+"\r\nCouldn't load calendar.");
 				};
 			};
 		}
@@ -159,26 +160,26 @@ function ActivityCalendarFill(Response) {
 	var CalendarID = Response.getElementsByTagName("calendarID")[0].firstChild.nodeValue;
 	var HTMLDays = document.getElementById("days_"+CalendarID);
 	var XMLDays = Response.getElementsByTagName("day");
-	var C = 0;
+	var DayCounter = 0;
 	document.getElementById("monthNav_"+CalendarID).innerHTML = Response.getElementsByTagName("monthNav")[0].firstChild.nodeValue.replace(/calChangeMonth/g,"ActivityCalendarLoad"); // changing to local function
 	document.getElementById("monthTitle_"+CalendarID).innerHTML = Response.getElementsByTagName("monthTitle")[0].firstChild.nodeValue;
 	while (HTMLDays.childNodes.length>0) {
 		HTMLDays.removeChild(HTMLDays.childNodes[0]);
 	};
-	for (var X=0;X<XMLDays.length;X++) {
-		if (C==7) {
-			C = 0;
+	for (var A=0;A<XMLDays.length;A++) {
+		if (DayCounter==7) {
+			DayCounter = 0;
 			var Breaker = new Element("Br");
 			Breaker.clear = "Left";
 			HTMLDays.appendChild(Breaker);
 		};
 		var NewDay = new Element("A");
-		NewDay.textContent = XMLDays[X].firstChild.nodeValue;
-		NewDay.id = XMLDays[X].getAttribute("linkID");
-		NewDay.className = XMLDays[X].getAttribute("cssClass").replace("noRollover",""); // removing hover style blocking
+		NewDay.textContent = XMLDays[A].firstChild.nodeValue;
+		NewDay.id = XMLDays[A].getAttribute("linkID");
+		NewDay.className = XMLDays[A].getAttribute("cssClass").replace("noRollover",""); // removing hover style blocking
 		NewDay.onclick = ActivityDaySet.bind(NewDay.id); // using own function, binding the clicked day ID
 		HTMLDays.appendChild(NewDay);
-		C++; // Delphi is better
+		DayCounter++;
 	};
 	setupCalRollovers();
 };
@@ -202,7 +203,7 @@ function ActivityContentClear() {
 	while (TempElem.length>0) {
 		/*
 		new Effect.Fade(TempElem[0],{duration:0.5}); // bit excessive, but swag
-		var IntervalID = setTimeout(function(){ // too bad it conflicts with showing swag because of asynchrony
+		var IntervalID = setTimeout(function() { // too bad it conflicts with showing swag because of asynchrony
 			ActivityContainer.removeChild(this);
 			clearInterval(IntervalID);
 		}.bind(TempElem[0]),1000);
@@ -230,34 +231,46 @@ function ActivityDayLoad(LoadingDay) {
 			LoadingDay -= Period * 86400; // decreasing begin date by difference in days
 		};
 		for (Period;Period>=0;Period--) {
-			console.log(new Date((LoadingDay+86400*Period)*1000).toString(),BaseURL+"ajaxgetusernews/?start="+(LoadingDay+86400*Period).toString());
-			//BaseURL+"ajaxgetusernews/?start="+(LoadingDay+86400*Period*(Period>0?+1:-1)).toString() // condition is the same as Period/Period*-1
-			new Ajax.Request(BaseURL+"ajaxgetusernews/?start="+(LoadingDay+86400*Period).toString(),{ // adding day length in seconds
+			var CurDay = LoadingDay + 86400 * Period; // currently loading day, in seconds
+			console.log(new Date(CurDay*1000).toString(),BaseURL+"ajaxgetusernews/?start="+CurDay.toString());
+			//BaseURL+"ajaxgetusernews/?start="+(CurDay*(Period>0?+1:-1)).toString() // condition is the same as Period/Period*-1
+			new Ajax.Request(BaseURL+"ajaxgetusernews/?start="+CurDay.toString(),{ // adding day length in seconds
 				insertion: Insertion.Bottom,
 				method: "get",
 				onSuccess: function(Data) {
 					var Response = Data.responseJSON;
-					if (Response&&Response.success==true&&Response.blotter_html) {
-						g_BlotterNextLoadURL = null; // preventing loading on scrolling
-						ActivityParse(Response.blotter_html); // parsing each day separately
-					} else if (Data.responseText) {
-						ActivityContainer.insert({bottom:Data.responseText});
+					var RequestDay = Data.request.url.split("start=")[1]; // have to get day again because of asynchrony
+					var MessageDay = new Date(RequestDay*1000).toLocaleDateString() + "\r\n"; // for error messages
+					if (Response.timestart==RequestDay) { // checking that Steam returned requested day and not a different one
+						if (Response&&Response.success==true&&Response.blotter_html) {
+							g_BlotterNextLoadURL = null; // preventing loading on scrolling
+							ActivityParse(Response.blotter_html); // parsing each day separately
+						} else if (Data.responseText) {
+							//ActivityContainer.insert({bottom:Data.responseText});
+							alert(MessageDay+Data.responseText);
+						} else {
+							alert(MessageDay+Data.statusText+"\r\nCouldn't load activity.");
+						};
 					} else {
-						MessageDialog.Show("Couldn't load activity.",Data.statusText);
+						alert(MessageDay+"Different day returned ("+new Date(Response.timestart*1000).toLocaleDateString()+").");
 					};
 				},
 				onFailure: function(Data) {
 					var Response = Data.responseJSON;
+					var RequestDay = Data.request.url.split("start=")[1];
+					var MessageDay = new Date(RequestDay*1000).toLocaleDateString() + "\r\n";
 					if (Response&&Response.message) {
-						ActivityContainer.insert({bottom:Response.message});
+						//ActivityContainer.insert({bottom:Response.message});
+						alert(MessageDay+Response.message);
 					} else if (Data.responseText) {
-						ActivityContainer.insert({bottom:Data.responseText});
+						//ActivityContainer.insert({bottom:Data.responseText});
+						alert(MessageDay+Data.responseText);
 					} else {
-						MessageDialog.Show("Couldn't load activity.",Data.statusText);
+						alert(MessageDay+Data.statusText+"\r\nCouldn't load activity.");
 					};
 				},
 				onComplete: function(Data) {
-					if (Data.request.url.split("start=")[1]==LoadingDay) { // loading finished; Data.responseJSON.timestart doesn't always work
+					if (Data.request.url.split("start=")[1]==LoadingDay) { // loading finished; Data.responseJSON.timestart may be from different day
 						new Effect.Fade("blotter_throbber",{duration:0.5});
 					};
 				}
@@ -344,7 +357,9 @@ function ActivityParse(ContentHTML) {
 		};
 		TempElem = EventLink.split("/"); // getting ID from link
 		TempElem = TempElem[TempElem.length-1];
-		if (TempElem.length<3) {alert("Link is too short ("+EventLink+").");}; // just to check that none of the links end with a slash
+		if (TempElem.length<3) { // just to check that none of the links end with a slash
+			alert("Link is too short ("+EventLink+").");
+		};
 		if (!(TempElem in ActivityList)) {
 			ActivityList[TempElem] = {
 				"Name": EventAuthor,
@@ -380,7 +395,9 @@ function ActivityFilterShow() {
 		TempElem.className = "ActivityCheckbox"; // for easier access to checkboxes
 		$("ActivityDiv"+SetNumber.toString()).appendChild(TempElem.parentElement);
 		SetNumber++; // switching to next set
-		if (SetNumber>ActivityContainer.getElementsByClassName("ActivityDiv").length) {SetNumber=1}; // wrapping around
+		if (SetNumber>ActivityContainer.getElementsByClassName("ActivityDiv").length) {
+			SetNumber=1; // wrapping around
+		};
 	};
 };
 function ActivityContentShow() {
@@ -391,7 +408,7 @@ function ActivityContentShow() {
 		if (Checkboxes[A].checked) { // checking for checked checkboxes
 			TempElem = ActivityList[Checkboxes[A].value]["Content"].clone(true); // true for deep cloning; turns out cloning isn't actually necessary
 			if (TempElem.getElementsByClassName("highlight_strip_scroll").length>0) { // checking for screenshot galleries' preview panel
-				var IntervalID = setTimeout(function(){
+				var IntervalID = setTimeout(function() {
 					Blotter_AddHighlightSliders(); // setting scrollbars for it after the effect (panel should be visible)
 					clearInterval(IntervalID);
 				},1000);

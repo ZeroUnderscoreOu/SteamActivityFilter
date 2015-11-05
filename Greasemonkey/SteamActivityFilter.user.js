@@ -1,5 +1,5 @@
 /*
-SteamActivityFilter userscript 1.2.2
+SteamActivityFilter userscript 1.2.3
 Written by ZeroUnderscoreOu
 http://steamcommunity.com/id/ZeroUnderscoreOu/
 http://steamcommunity.com/groups/0_oWassup/discussions/3/
@@ -9,7 +9,7 @@ https://github.com/ZeroUnderscoreOu/SteamActivityFilter
 // ==UserScript==
 // @name        SteamActivityFilter
 // @author      ZeroUnderscoreOu
-// @version     1.2.2
+// @version     1.2.3
 // @icon        https://raw.githubusercontent.com/ZeroUnderscoreOu/SteamActivityFilter/master/SteamActivityFilter128.png
 // @description Filter for friends' activity in Steam. Allows to load activity for selected days and display needed part of it.
 // @downloadURL https://raw.githubusercontent.com/ZeroUnderscoreOu/SteamActivityFilter/master/Greasemonkey/SteamActivityFilter.user.js

@@ -1,5 +1,5 @@
 /*
-SteamActivityFilter userscript 1.2.2
+SteamActivityFilter userscript 1.2.3
 Written by ZeroUnderscoreOu
 http://steamcommunity.com/id/ZeroUnderscoreOu/
 http://steamcommunity.com/groups/0_oWassup/discussions/3/
@@ -72,7 +72,6 @@ function ActivityInitialize() {
 				+ '<Input Type="Button" Value="Filter" OnClick="ActivityContentShow();" Class="btn_green_white_innerfade btn_small_wide">'
 			+ '</Div>'
 		+ '</Form>'
-		+ '<Br>'
 		+ '<Div ID="cal1" Style="Display:None;">' // calendar template
 			+ '<Div ID="calendarBox_cal1" Class="calendarBox">'
 				+ '<Div ID="monthRow_cal1" Class="monthRow">'
@@ -90,7 +89,8 @@ function ActivityInitialize() {
 				+ '</Div>'
 				+ '<Div ID="days_cal1" Class="days"></Div>'
 			+ '</Div>'
-		+ '</Div>';
+		+ '</Div>'
+		+ '<Br>';
 	TempElem = TempElem.appendChild(new Element("Script")); // missing scripts for calendar
 	TempElem.src = "http://steamcommunity-a.akamaihd.net/public/javascript/calendar.js?v=.SRHlwwlZP-Ie";
 	TempElem.type = "Text/JavaScript";

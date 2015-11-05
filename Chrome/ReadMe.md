@@ -11,7 +11,8 @@ Written by **ZeroUnderscoreOu**
 #### Versions
 [Greasemonkey](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Greasemonkey) /
 [Firefox](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Firefox) /
-[Chrome & Opera](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Chrome&Opera)
+[Chrome](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Chrome) /
+[Opera](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Opera)
 
 
 
@@ -23,7 +24,7 @@ Filter for friends' activity in Steam. Allows to load activity for selected days
 
 #### Usage:
 
-- Click on the date field to select the date to load activity for. If shown, calendar isn't hidden until date is selected.
+- Click on the date field to select the date to load activity for. If shown, calendar isn't hidden until date is selected. If the field flashes after selection, it means that you are not in any groups and don't have personal event calendar. If you think this is wrong, please post on the forum.
 
 - Enter the ammount of additional days to load activity for (0 - only current day; accepts negative values to load days prior to selected).
 

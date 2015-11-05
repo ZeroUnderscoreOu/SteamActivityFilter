@@ -1,0 +1,27 @@
+{
+	"manifest_version": 2,
+	"name": "Steam Activity Filter",
+	"short_name": "SAF",
+	"author": "ZeroUnderscoreOu",
+	"version": "1.2.3",
+	"homepage_url": "http://steamcommunity.com/groups/0_oWassup/discussions/3/",
+	"icons": {
+		"16": "Icon16.png",
+		"48": "Icon48.png",
+		"128": "Icon128.png"
+	},
+	"description": "Filter for friends' activity in Steam. Allows to load activity for selected days and display needed part of it.",
+	"content_scripts": [
+		{
+			"matches": [
+				"*://steamcommunity.com/*/home*"
+			],
+			"js": [
+				"Index.js"
+			]
+		}
+	],
+	"web_accessible_resources": [
+		"SteamActivityFilter.js"
+	]
+}

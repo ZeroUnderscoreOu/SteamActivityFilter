@@ -11,7 +11,8 @@ Written by **ZeroUnderscoreOu**
 #### Versions
 [Greasemonkey](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Greasemonkey) /
 [Firefox](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Firefox) /
-[Chrome & Opera](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Chrome&Opera)
+[Chrome](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Chrome) /
+[Opera](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Opera)
 
 
 

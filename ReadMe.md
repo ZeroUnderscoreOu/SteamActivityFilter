@@ -8,12 +8,6 @@ Written by **ZeroUnderscoreOu**
 [Forum](http://steamcommunity.com/groups/0_oWassup/discussions/3/) /
 [GitHub](https://github.com/ZeroUnderscoreOu/SteamActivityFilter)
 
-#### Versions
-[Greasemonkey](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Greasemonkey) /
-[Firefox](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Firefox) /
-[Chrome](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Chrome) /
-[Opera](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Opera)
-
 
 
 #### Description:
@@ -22,11 +16,24 @@ Filter for friends' activity in Steam. Allows to load activity for selected days
 
 
 
+#### Downloading:
+
+Open needed folder on GitHub:
+
+[Greasemonkey](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Greasemonkey) /
+[Firefox](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Firefox) /
+[Chrome](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Chrome) /
+[Opera](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Opera)
+
+choose *.user.js / *.xpi / *.crx / *.nex file depending on version, and press "Raw" button at the upper right.
+
+
+
 #### Usage:
 
-- Click on the date field to select the date to load activity for. If shown, calendar isn't hidden until date is selected. If the field flashes after selection, it means that you are not in any groups and don't have personal event calendar. If you think this is wrong, please post on the forum.
+- Click on the date field to select the day to load activity for. If shown, calendar isn't hidden until date is selected. If the field flashes after selection, it means that you are not in any groups and don't have personal event calendar. If you think this is wrong, please post on the forum.
 
-- Enter the ammount of additional days to load activity for (0 - only current day; accepts negative values to load days prior to selected).
+- Enter the ammount of additional days to load (0 - only selected day, 1 - selected day and the next; accepts negative values to load prior days).
 
 - Click on the "Load" button to load activity.
 
@@ -44,15 +51,21 @@ Loaded activity stacks until cleared, so several days can be consequently loaded
 
 #### Possible problems:
 
-May lead to memory overload, particularly due to cloning.
+- May lead to memory overload, particularly due to cloning.
 
-May skip some activity (which I haven't encountered).
+- May skip some activity (which I haven't encountered).
 
-Does few excessive operations, particularly due to dynamically loaded scripts.
+- Does few excessive operations, particularly due to dynamically loaded scripts.
 
-Events are duplicated if same day is loaded several times (as loaded activity stacks).
+- Events are duplicated if same day is loaded several times (as loaded activity stacks).
 
-Steam's calendar, and, thus, script itself isn't intended to work with any century other then current 21st (year is stored in two digit format).
+- Steam's calendar, and, thus, script itself isn't intended to work with any century other then current 21st (year is stored in two digit format).
+
+
+
+#### Debugging:
+
+Link to every loaded day with date indication and unparsed events are output in browser's console.
 
 
 

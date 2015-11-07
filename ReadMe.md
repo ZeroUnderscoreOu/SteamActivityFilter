@@ -2,7 +2,7 @@
 
 Written by **ZeroUnderscoreOu**
 
-#### Contacts
+#### Contacts:
 [Profile](http://steamcommunity.com/id/ZeroUnderscoreOu/) /
 [Group](http://steamcommunity.com/groups/0_oWassup/) /
 [Forum](http://steamcommunity.com/groups/0_oWassup/discussions/3/) /

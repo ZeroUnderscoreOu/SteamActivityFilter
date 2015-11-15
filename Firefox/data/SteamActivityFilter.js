@@ -1,5 +1,5 @@
 /*
-SteamActivityFilter userscript 1.2.2
+Steam Activity Filter userscript 1.2.4
 Written by ZeroUnderscoreOu
 http://steamcommunity.com/id/ZeroUnderscoreOu/
 http://steamcommunity.com/groups/0_oWassup/discussions/3/
@@ -12,6 +12,10 @@ https://github.com/ZeroUnderscoreOu/SteamActivityFilter
 // (возможно) переписать new Element() на document.createElement() и $() на document.getElementById()
 // (возможно) перенести SetNumber++ в условие с префиксной записью
 // (возможно) добавить сортировку по алфавиту
+// (возможно) разбить блок новостей от Гейба по пользователям
+// (возможно) добавить проверку порядка дней по таймстампам, добавить даты
+// теоретически отчистку формы можно делать через reset
+// действительно ли HTML в TempElem.innerHTML plain?
 // "Seamonkey": "2.37 - 2.41"
 
 var ActivityContainer = $("blotter_content"); // activity block
@@ -72,7 +76,6 @@ function ActivityInitialize() {
 				+ '<Input Type="Button" Value="Filter" OnClick="ActivityContentShow();" Class="btn_green_white_innerfade btn_small_wide">'
 			+ '</Div>'
 		+ '</Form>'
-		+ '<Br>'
 		+ '<Div ID="cal1" Style="Display:None;">' // calendar template
 			+ '<Div ID="calendarBox_cal1" Class="calendarBox">'
 				+ '<Div ID="monthRow_cal1" Class="monthRow">'
@@ -90,14 +93,19 @@ function ActivityInitialize() {
 				+ '</Div>'
 				+ '<Div ID="days_cal1" Class="days"></Div>'
 			+ '</Div>'
-		+ '</Div>';
+		+ '</Div>'
+		+ '<Br>';
+	/* moved to separate local file
 	TempElem = TempElem.appendChild(new Element("Script")); // missing scripts for calendar
 	TempElem.src = "http://steamcommunity-a.akamaihd.net/public/javascript/calendar.js?v=.SRHlwwlZP-Ie";
 	TempElem.type = "Text/JavaScript";
+	*/
+	/* I don't remember why exactly I added this script and looks like it's unneeded; I'll comment it out for now and check if there would be any errors
 	TempElem = TempElem.parentElement.appendChild(new Element("Script"));
 	TempElem.src = "http://steamcommunity-a.akamaihd.net/public/javascript/group_admin_functions.js?v=18ccuSc9Dzhv&l=english";
 	TempElem.type = "Text/JavaScript";
-	TempElem = TempElem.parentElement;
+	*/
+	//ActivityContainer.insertBefore(TempElem.parentElement,ActivityContainer.firstChild);
 	ActivityContainer.insertBefore(TempElem,ActivityContainer.firstChild); // using innerHTML instead doesn't seem to work
 	$("ActivityStart").value = ActivityDay.toLocaleDateString(); // filling the day
 	ActivityCalendarLoad("cal1",parseInt(ActivityDay.getMonth())+1,ActivityDay.getFullYear()); // initializing calendar
@@ -112,6 +120,7 @@ function ActivityCalendarLoad(CalendarID,NewMonth,NewYear,GroupCalendar) {
 	} else {
 		CalendarURL = BaseURL;
 	};
+	//GroupCalendar ? CalendarURL = "http://steamcommunity.com/groups/0_oWassup/" : CalendarURL = BaseURL;
 	if (NewMonth!=undefined&&NewYear!=undefined) {
 		PostData["month"] = NewMonth;
 		PostData["year"] = NewYear;
@@ -162,7 +171,7 @@ function ActivityCalendarFill(Response) {
 	var XMLDays = Response.getElementsByTagName("day");
 	var DayCounter = 0;
 	document.getElementById("monthNav_"+CalendarID).innerHTML = Response.getElementsByTagName("monthNav")[0].firstChild.nodeValue.replace(/calChangeMonth/g,"ActivityCalendarLoad"); // changing to local function
-	document.getElementById("monthTitle_"+CalendarID).innerHTML = Response.getElementsByTagName("monthTitle")[0].firstChild.nodeValue;
+	document.getElementById("monthTitle_"+CalendarID).textContent = Response.getElementsByTagName("monthTitle")[0].firstChild.nodeValue; // plain text, innerHTML not needed here
 	while (HTMLDays.childNodes.length>0) {
 		HTMLDays.removeChild(HTMLDays.childNodes[0]);
 	};
@@ -241,18 +250,18 @@ function ActivityDayLoad(LoadingDay) {
 					var Response = Data.responseJSON;
 					var RequestDay = Data.request.url.split("start=")[1]; // have to get day again because of asynchrony
 					var MessageDay = new Date(RequestDay*1000).toLocaleDateString() + "\r\n"; // for error messages
-					if (Response.timestart==RequestDay) { // checking that Steam returned requested day and not a different one
-						if (Response&&Response.success==true&&Response.blotter_html) {
+					if (Response&&Response.success==true&&Response.blotter_html) {
+						if (Response.timestart==RequestDay) { // checking that Steam returned requested day and not a different one
 							g_BlotterNextLoadURL = null; // preventing loading on scrolling
 							ActivityParse(Response.blotter_html); // parsing each day separately
-						} else if (Data.responseText) {
-							//ActivityContainer.insert({bottom:Data.responseText});
-							alert(MessageDay+Data.responseText);
 						} else {
-							alert(MessageDay+Data.statusText+"\r\nCouldn't load activity.");
+							alert(MessageDay+"Different day returned ("+new Date(Response.timestart*1000).toLocaleDateString()+").");
 						};
+					} else if (Data.responseText) {
+						//ActivityContainer.insert({bottom:Data.responseText});
+						alert(MessageDay+Data.responseText);
 					} else {
-						alert(MessageDay+"Different day returned ("+new Date(Response.timestart*1000).toLocaleDateString()+").");
+						alert(MessageDay+Data.statusText+"\r\nCouldn't load activity.");
 					};
 				},
 				onFailure: function(Data) {

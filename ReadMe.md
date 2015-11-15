@@ -1,4 +1,4 @@
-# SteamActivityFilter userscript
+# Steam Activity Filter userscript
 
 Written by **ZeroUnderscoreOu**
 
@@ -25,7 +25,7 @@ Open needed folder on GitHub:
 [Chrome](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Chrome) /
 [Opera](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Opera)
 
-choose *.user.js / *.xpi / *.crx / *.nex file depending on version, and press "Raw" button at the upper right.
+open *.user.js / *.xpi / *.crx / *.nex file depending on version, and press "Raw" button at the upper right.
 
 
 

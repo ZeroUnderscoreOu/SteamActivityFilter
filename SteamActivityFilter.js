@@ -1,5 +1,5 @@
 /*
-Steam Activity Filter userscript 1.2.4
+Steam Activity Filter userscript 1.3.0
 Written by ZeroUnderscoreOu
 http://steamcommunity.com/id/ZeroUnderscoreOu/
 http://steamcommunity.com/groups/0_oWassup/discussions/3/
@@ -9,30 +9,44 @@ https://github.com/ZeroUnderscoreOu/SteamActivityFilter
 "use strict";
 
 //ToDo
-// (возможно) переписать new Element() на document.createElement() и $() на document.getElementById()
+// (возможно) переписать $() на document.getElementById()
 // (возможно) перенести SetNumber++ в условие с префиксной записью
 // (возможно) добавить сортировку по алфавиту
 // (возможно) разбить блок новостей от Гейба по пользователям
 // (возможно) добавить проверку порядка дней по таймстампам, добавить даты
+// (возможно) переписать что-нибудь на for of и querySelectorAll
 // теоретически отчистку формы можно делать через reset
-// действительно ли HTML в TempElem.innerHTML plain?
+// переписать TempElem[A].innerHTML = "" обратно на removeChild()
+// прокомментировать, что при коротком дне может загрузиться лишняя активность
+// должна ли активность стекаться?
+// прокомментировать ActivityDayLoad(), ActivityPrepare(), ActivityParse(), ActivityContentShow(), ActivityLoader(), ActivityLinks и ActivityResponder
 // "Seamonkey": "2.37 - 2.41"
 
 var ActivityContainer = $("blotter_content"); // activity block
 var ActivityList = {}; // activity list, sorted by author; without explicit assign script crashes on "in" operaton on empty list
 var ActivityDay = new Date(); // current day
 //var BaseURL = g_BlotterNextLoadURL.split("ajaxgetusernews")[0]; // depends on fully loaded activity
-//var BaseURL = "http://steamcommunity.com/my/"; // redirects, causes problems with some requests
+//var BaseURL = "http://steamcommunity.com/my/"; // redirects, causes problems with post requests
 var BaseURL = document.location.href.split("home")[0]; // profile link; why I didn't use window.location.href from the start?
+var ActivityLinks = []; // array of links to activity days
+var ActivityResponder = { // responder object to track Ajax requests, call them in order and execute after they're complete
+	onComplete: function(Data) {
+		//ActivityParse(document.getElementById("blotter_day_"+Data.url.split("start=")[1]).getElementsByClassName("blotter_block"));
+		ActivityLoader();
+	}
+};
 /*
 function ActivityCheck() {
-	if ($("blotter_throbber").visible()) { // if activity is loading
-		var IntervalID = setTimeout(function() { // I don't fully understand why, but it works only with anonymized function
+	// $("blotter_throbber").visible()
+	if (window.Ajax.activeRequestCount>0) { // if activity is loading
+		var IntervalID = setTimeout(function() { // I don't fully understand why, but it doesn't work with direct call, only through anonymized function
 			ActivityCheck();
 			clearInterval(IntervalID);
 		},500);
 	} else {
-		ActivityInitialize();
+		//ActivityInitialize();
+		g_BlotterNextLoadURL = null;
+		ActivityParse(ActivityContainer.getElementsByClassName("blotter_block"));
 	};
 };
 */
@@ -40,7 +54,7 @@ function ActivityInitialize() {
 	var TempElem = new Element("Div"); // variable for temporary elements; div for filter form and additional elements
 	ActivityDay.setHours(0,0,0,0); // activity uses beginning of the day in links
 	//TempElem.id = "ActivityMainDiv";
-	TempElem.innerHTML = // plain HTML, partly copied from Steam's event setting interface
+	TempElem.innerHTML = // HTML, partly copied from Steam's event setting interface
 		'<Style>'
 			+ '@import "http://steamcommunity-a.akamaihd.net/public/css/skin_1/calendar.css?v=.944VhImsKDKs";'
 			+ '#cal1 {Position:Absolute; Z-Index:10;}'
@@ -52,6 +66,7 @@ function ActivityInitialize() {
 			+ '.ActivitySpacer {Display:Inline-Block; Min-Width:10px;}'
 			+ '#blotter_throbber {Display:Inline-Block; Position:Fixed; Left:0px; Top:0px; Width:100%; Height:100%; Margin-Top: 0px; Background-Color: RGBA(0,0,0,0.5); Z-Index:500;}' // overriding Steam's style; I don't know why I had to set Z-Index so high
 			+ '.throbber {Position:Relative; Top:250px;}' // also overriding
+			+ '.calendarBox .days a:Hover {Width:18px; Height:16px; Background-Color:#D05F29; Color:#1F1F1F; Border:Solid #D05F29 1px; Cursor:Pointer;}' // the rollOver style from calendar.css, changed to hover
 		+ '</Style>'
 		+ '<Form ID="ActivityFilter" OnSubmit="ActivityDayLoad(ActivityDay.getTime()/1000);return false;" Class="ActivityCenter">' // activity filter form
 			+ '<Div ID="ActivityDiv1" Class="ActivityDiv"></Div>'
@@ -76,10 +91,14 @@ function ActivityInitialize() {
 				+ '<Input Type="Button" Value="Filter" OnClick="ActivityContentShow();" Class="btn_green_white_innerfade btn_small_wide">'
 			+ '</Div>'
 		+ '</Form>'
-		+ '<Div ID="cal1" Style="Display:None;">' // calendar template
+		+ '<Div ID="cal1" Style="Display:None;" onload="alert();">' // calendar template
 			+ '<Div ID="calendarBox_cal1" Class="calendarBox">'
 				+ '<Div ID="monthRow_cal1" Class="monthRow">'
-					+ '<Div ID="monthNav_cal1" Class="monthNav"></Div>'
+					+ '<Div ID="monthNav_cal1" Class="monthNav">' // originally content of this div is replaced by XML response, but I'm not using it
+						+ '<A><Img Width="17" Height="17" Border="0" Src="http://steamcommunity-a.akamaihd.net/public/images/skin_1/monthBackOn.gif"></A>'
+						+ '&nbsp;'
+						+ '<A><Img Width="17" Height="17" Border="0" Src="http://steamcommunity-a.akamaihd.net/public/images/skin_1/monthForwardOn.gif"></A>'
+					+ '</Div>'
 					+ '<H1 ID="monthTitle_cal1" Class="monthTitle"></H1>'
 				+ '</Div>'
 				+ '<Div ID="weekHead_cal1" Class="weekHead">'
@@ -153,7 +172,7 @@ function ActivityCalendarLoad(CalendarID,NewMonth,NewYear,GroupCalendar) {
 	});
 };
 function ActivityCalendarFill(Response) {
-/*
+	/*
 	if (req.readyState==4) {
 		if (req.status==200) {
 			var Response = req.responseXML.documentElement;
@@ -165,12 +184,19 @@ function ActivityCalendarFill(Response) {
 			};
 		};
 	};
-*/
+	*/
 	var CalendarID = Response.getElementsByTagName("calendarID")[0].firstChild.nodeValue;
 	var HTMLDays = document.getElementById("days_"+CalendarID);
 	var XMLDays = Response.getElementsByTagName("day");
 	var DayCounter = 0;
-	document.getElementById("monthNav_"+CalendarID).innerHTML = Response.getElementsByTagName("monthNav")[0].firstChild.nodeValue.replace(/calChangeMonth/g,"ActivityCalendarLoad"); // changing to local function
+	var NavLinks = new Element("Div");
+	var NavDate;
+	NavLinks.innerHTML = Response.getElementsByTagName("monthNav")[0].firstChild.nodeValue; // setting month navigation instead of inserting from XML, 'cause Mozilla's standards
+	NavDate = NavLinks.getElementsByTagName("A")[0].href.match(/%20(\d{1,2}),%20(\d{4})/); // taking parameters from function call; have to also account for URL-escaped spaces
+	document.getElementById("monthNav_"+CalendarID).getElementsByTagName("A")[0].onclick = ActivityCalendarLoad.bind(null,CalendarID,NavDate[1],NavDate[2]); // previous month
+	NavDate = NavLinks.getElementsByTagName("A")[1].href.match(/%20(\d{1,2}),%20(\d{4})/);
+	document.getElementById("monthNav_"+CalendarID).getElementsByTagName("A")[1].onclick = ActivityCalendarLoad.bind(null,CalendarID,NavDate[1],NavDate[2]); // next month
+	//document.getElementById("monthNav_"+CalendarID).innerHTML = Response.getElementsByTagName("monthNav")[0].firstChild.nodeValue.replace(/calChangeMonth/g,"ActivityCalendarLoad"); //  changing to local function
 	document.getElementById("monthTitle_"+CalendarID).textContent = Response.getElementsByTagName("monthTitle")[0].firstChild.nodeValue; // plain text, innerHTML not needed here
 	while (HTMLDays.childNodes.length>0) {
 		HTMLDays.removeChild(HTMLDays.childNodes[0]);
@@ -204,7 +230,10 @@ function ActivityDaySet() {
 function ActivityFilterClear() {
 	var TempElem = ActivityContainer.getElementsByClassName("ActivityDiv");
 	for (var A=0;A<TempElem.length;A++) { // clearing filter form before filling
-		TempElem[A].innerHTML = ""; // faster then removing elements separately
+		while (TempElem[A].children.length>0) {
+			TempElem[A].removeChild(TempElem[A].children[0]); // switching back to removeChild() to not to use innerHTML, 'cause Mozilla's standards
+		};
+		//TempElem[A].innerHTML = ""; // faster then removing elements separately
 	};
 };
 function ActivityContentClear() {
@@ -243,6 +272,7 @@ function ActivityDayLoad(LoadingDay) {
 			var CurDay = LoadingDay + 86400 * Period; // currently loading day, in seconds
 			console.log(new Date(CurDay*1000).toString(),BaseURL+"ajaxgetusernews/?start="+CurDay.toString());
 			//BaseURL+"ajaxgetusernews/?start="+(CurDay*(Period>0?+1:-1)).toString() // condition is the same as Period/Period*-1
+			/*
 			new Ajax.Request(BaseURL+"ajaxgetusernews/?start="+CurDay.toString(),{ // adding day length in seconds
 				insertion: Insertion.Bottom,
 				method: "get",
@@ -253,7 +283,7 @@ function ActivityDayLoad(LoadingDay) {
 					if (Response&&Response.success==true&&Response.blotter_html) {
 						if (Response.timestart==RequestDay) { // checking that Steam returned requested day and not a different one
 							g_BlotterNextLoadURL = null; // preventing loading on scrolling
-							ActivityParse(Response.blotter_html); // parsing each day separately
+							ActivityPrepare(Response.blotter_html); // parsing each day separately
 						} else {
 							alert(MessageDay+"Different day returned ("+new Date(Response.timestart*1000).toLocaleDateString()+").");
 						};
@@ -284,24 +314,37 @@ function ActivityDayLoad(LoadingDay) {
 					};
 				}
 			});
+			*/
+			ActivityLinks.push(BaseURL+"ajaxgetusernews/?start="+CurDay.toString());
+			//StartLoadingBlotter(BaseURL+"ajaxgetusernews/?start="+CurDay.toString());
 		};
+		ActivityContentClear();
+		Ajax.Responders.register(ActivityResponder);
+		ActivityLoader();
+		//ActivityCheck();
 	};
 };
-function ActivityParse(ContentHTML) {
-	var EventAuthor;
-	var EventType;
-	var EventLink;
+function ActivityLoader() {
+	if (ActivityLinks.length>0) {
+		StartLoadingBlotter(ActivityLinks.shift());
+	} else {
+		Ajax.Responders.unregister(ActivityResponder);
+		g_BlotterNextLoadURL = null;
+		Blotter_AddHighlightSliders();
+		ActivityParse(ActivityContainer.getElementsByClassName("blotter_block"));
+	};
+};
+/*
+function ActivityPrepare(ContentHTML) {
 	var EventContainer = new Element("Div"); // container element for activity
 	var EventElements;
 	var EventScripts;
-	var TempElem;
 	EventContainer.innerHTML = ContentHTML; // enabling element functions
 	//EventContainer.update(ContentHTML); update() doesn't fit, because it removes scripts from HTML
 	EventElements = [].slice.call(EventContainer.getElementsByClassName("bb_link")); // transforming HTMLCollection to array
 	EventElements = EventElements.filter(function(Match){return /dynamiclink_\d+/.test(Match.id)}); // filtering only replaced links by corresponding IDs
 	EventScripts = EventContainer.getElementsByTagName("Script");
 	EventScripts = EventScripts[EventScripts.length-1]; // last script, appended at the end of activity; contains dynamic link replacing functions; bit risky to access it by order
-	EventContainer = EventContainer.getElementsByClassName("blotter_block"); // all events
 	if (EventScripts&&/ReplaceDynamicLink/.test(EventScripts.textContent)) { // ending script is not always present
 		EventScripts.textContent = EventScripts.textContent.replace( // searching for dynamic contents replacing functions and performing replacemnts
 			/ReplaceDynamicLink\(\s*[^\\](')dynamiclink_(\d+)\1,\s*[^\\](\")(.*?)\3\s*\);/gi, // unescaped single/double quotes and contents of them
@@ -313,21 +356,33 @@ function ActivityParse(ContentHTML) {
 			}
 		);
 	};
-	/* same as above replacement, but separately for each match instead of global
-	EventElements.forEach(function(Match){
-		EventScripts.textContent = EventScripts.textContent.replace(
-			new RegExp("ReplaceDynamicLink\\(\\s*[^\\\\](['\"])"+Match.id+"\\1,\\s*[^\\\\](['\"])(.*?)\\2\\s*\\);","i"), // too much escaping
-			function(Match,B1,B2,B3,Offset,Variable){
-				B3 = B3.replace(/\\(['\"\/])/g,"$1");
-				Match.outerHTML = B3.replace(/\\r/g,"&#13;").replace(/\\n/g,"&#10;").replace(/\\t/g,"&#09;");
-				return "";
-			}
-		);
-	});
-	*/
-	while (EventContainer.length>0) { // appendChild() doesn't remove elements here, but still
-		if (EventContainer[0].getElementsByClassName("blotter_author_block").length>0) { // event header
-			TempElem = EventContainer[0].getElementsByClassName("blotter_author_block")[0].getElementsByTagName("A");
+	// same as above replacement, but separately for each match instead of global
+	//EventElements.forEach(function(Match){
+	//	EventScripts.textContent = EventScripts.textContent.replace(
+	//		new RegExp("ReplaceDynamicLink\\(\\s*[^\\\\](['\"])"+Match.id+"\\1,\\s*[^\\\\](['\"])(.*?)\\2\\s*\\);","i"), // too much escaping
+	//		function(Match,B1,B2,B3,Offset,Variable){
+	//			B3 = B3.replace(/\\(['\"\/])/g,"$1");
+	//			Match.outerHTML = B3.replace(/\\r/g,"&#13;").replace(/\\n/g,"&#10;").replace(/\\t/g,"&#09;");
+	//			return "";
+	//		}
+	//	);
+	//});
+	ActivityParse(EventContainer.getElementsByClassName("blotter_block")); // all events
+};
+*/
+function ActivityParse(EventContainer) {
+	var EventAuthor;
+	var EventType;
+	var EventLink;
+	var TempElem;
+	//var EventElements;
+	//var EventScripts;
+	//while (EventContainer.length>0)
+	//EventContainer[0]
+	for (var Event of EventContainer)
+	{
+		if (Event.getElementsByClassName("blotter_author_block").length>0) { // event header
+			TempElem = Event.getElementsByClassName("blotter_author_block")[0].getElementsByTagName("A");
 			for (var A=0;A<TempElem.length;A++) { // cycling through found links
 				if ((TempElem[A].href.indexOf("/id/")!=-1||TempElem[A].href.indexOf("/profiles/")!=-1)&&/\S/.test(TempElem[A].textContent)) { // checking for link text
 					EventAuthor = TempElem[A].textContent;
@@ -336,8 +391,8 @@ function ActivityParse(ContentHTML) {
 					break;
 				};
 			};
-		} else if (EventContainer[0].getElementsByClassName("blotter_group_announcement_header").length>0) {
-			TempElem = EventContainer[0].getElementsByClassName("blotter_group_announcement_header")[0].getElementsByTagName("A");
+		} else if (Event.getElementsByClassName("blotter_group_announcement_header").length>0) {
+			TempElem = Event.getElementsByClassName("blotter_group_announcement_header")[0].getElementsByTagName("A");
 			for (var A=0;A<TempElem.length;A++) {
 				if (TempElem[A].href.indexOf("/groups/")!=-1&&/\S/.test(TempElem[A].textContent)) {
 					EventAuthor = TempElem[A].textContent;
@@ -346,8 +401,8 @@ function ActivityParse(ContentHTML) {
 					break;
 				};
 			};
-		} else if (EventContainer[0].getElementsByClassName("blotter_group_announcement_header_ogg").length>0) {
-			TempElem = EventContainer[0].getElementsByClassName("blotter_group_announcement_header_ogg")[0].getElementsByTagName("A");
+		} else if (Event.getElementsByClassName("blotter_group_announcement_header_ogg").length>0) {
+			TempElem = Event.getElementsByClassName("blotter_group_announcement_header_ogg")[0].getElementsByTagName("A");
 			for (var A=0;A<TempElem.length;A++) {
 				if (TempElem[A].href.indexOf("/games/")!=-1&&/\S/.test(TempElem[A].textContent)) {
 					EventAuthor = TempElem[A].textContent;
@@ -356,37 +411,42 @@ function ActivityParse(ContentHTML) {
 					break;
 				};
 			};
-		} else if (EventContainer[0].getElementsByClassName("blotter_daily_rollup").length>0) { // achievements & stuff
+		} else if (Event.getElementsByClassName("blotter_daily_rollup").length>0) { // achievements & stuff
 			EventAuthor = "Gabe Newell Daily"; // daily news from Gabe
 			EventType = "Daily";
 			EventLink = "http://steamcommunity.com/id/gabelogannewell";
 			//EventAuthor = 22202;
 		} else { // checking for unsorted, still not sure if script works with all events
-			console.log("Unsorted activity\r\n",EventContainer[0].outerHTML);
+			console.log("Unsorted activity\r\n",Event.outerHTML);
 		};
 		TempElem = EventLink.split("/"); // getting ID from link
 		TempElem = TempElem[TempElem.length-1];
-		if (TempElem.length<3) { // just to check that none of the links end with a slash
+		if (TempElem.length<3) { // just to check that none of the links end with a slash; 3 is pretty random
 			alert("Link is too short ("+EventLink+").");
 		};
 		if (!(TempElem in ActivityList)) {
 			ActivityList[TempElem] = {
 				"Name": EventAuthor,
 				"Type": EventType,
-				"Content": new Element("Div")
+				//"Content": new Element("Div")
+				"Content": []
 			};
-			ActivityList[TempElem]["Content"].className = "blotter_day"; // for easier access to shown divs
-			ActivityList[TempElem]["Content"].hide(); // hiding to use an effect later
+			//ActivityList[TempElem]["Content"].className = "blotter_day"; // for easier access to shown divs
+			//ActivityList[TempElem]["Content"].hide(); // hiding to use an effect later
 		};
-		EventElements = EventContainer[0].getElementsByTagName("Script");
+		/*
+		EventElements = Event.getElementsByTagName("Script");
 		EventScripts = new Element("Script");
-		while (EventElements.length>0) { // hack to make scripts work - removing them from activity element and readding
+		while (EventElements.length>0) { // removing scripts  from activity element and readding to make them work
 			EventScripts.textContent += "\r\n" + EventElements[0].textContent;
-			EventElements[0].parentElement.removeChild(EventElements[0]); // preventing duplicates; EventContainer[0] is not always direct parent
+			EventElements[0].parentElement.removeChild(EventElements[0]); // preventing duplicates; Event is not always direct parent
 			//EventElements[0].outerHTML = ""; // another variant of removing the script
 		};
-		EventContainer[0].appendChild(EventScripts); // readding
-		ActivityList[TempElem]["Content"].appendChild(EventContainer[0]);
+		Event.appendChild(EventScripts); // readding
+		*/
+		//ActivityList[TempElem]["Content"].appendChild(Event);
+		Event.hide();
+		ActivityList[TempElem]["Content"].push(Event);
 	};
 	ActivityFilterShow();
 };
@@ -412,9 +472,10 @@ function ActivityFilterShow() {
 function ActivityContentShow() {
 	var Checkboxes = $("ActivityFilter").getElementsByClassName("ActivityCheckbox"); // all filter checkboxes
 	var TempElem;
-	ActivityContentClear();
+	//ActivityContentClear();
 	for (var A=0;A<Checkboxes.length;A++) {
 		if (Checkboxes[A].checked) { // checking for checked checkboxes
+			/*
 			TempElem = ActivityList[Checkboxes[A].value]["Content"].clone(true); // true for deep cloning; turns out cloning isn't actually necessary
 			if (TempElem.getElementsByClassName("highlight_strip_scroll").length>0) { // checking for screenshot galleries' preview panel
 				var IntervalID = setTimeout(function() {
@@ -424,7 +485,52 @@ function ActivityContentShow() {
 			};
 			ActivityContainer.appendChild(TempElem);
 			new Effect.Appear(TempElem,{duration:0.5}); // showing off
+			*/
+			ActivityList[Checkboxes[A].value]["Content"].forEach(function(Match){
+				new Effect.Appear(Match,{duration:0.5});
+			});
+		} else {
+			ActivityList[Checkboxes[A].value]["Content"].forEach(function(Match){
+				if (Match.visible) {
+					Match.hide();
+				};
+			});
 		};
 	};
 };
+/* this are the missing functions from http://steamcommunity-a.akamaihd.net/public/javascript/calendar.js?v=.SRHlwwlZP-Ie
+I don't know why the heck they used such a complicated way for styling instead of CSS's hover, I replaced it with a style (yea, I do stuff with a style)
+function setupCalRollovers() {
+	allAs = document.getElementsByTagName('a');
+	for (var x=0;x<allAs.length;x++) {
+		thisA = allAs[x];
+		if (thisA.parentNode.className=='days') {
+			if (thisA.className!='otherMonth'&&thisA.className.indexOf('noRollover')==-1&&thisA.className.indexOf('isCurrent')==-1) {
+				//addEvent(thisA,'mouseover',calDayOver,false);
+				//addEvent(thisA,'mouseout',calDayOff,false);
+			} else {
+				thisA.style.cursor = 'default';
+			}
+		}
+	}
+};
+function calDayOver(e) {
+	var srcEl = window.event ? window.event.srcElement : e ? e.target : null;
+	if (!srcEl) {
+		return;
+	};
+	srcEl.className += ' rollOver';
+};
+function calDayOff(e) {
+	var srcEl = window.event ? window.event.srcElement : e ? e.target : null;
+	if (!srcEl) {
+		return;
+	};
+	srcEl.className = srcEl.className.replace(/rollOver/,'');
+	if (srcEl.className==' ') {
+		srcEl.classname='';
+	};
+};
+addEvent(window,"load",setupCalRollovers,false); // should be called after initializing, when calendar is aready present
+*/
 ActivityInitialize();

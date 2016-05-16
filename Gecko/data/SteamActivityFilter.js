@@ -1,23 +1,10 @@
 /*
-Steam Activity Filter userscript 1.4.0
+Steam Activity Filter userscript 1.4.0-trimmed
 Written by ZeroUnderscoreOu
 http://steamcommunity.com/id/ZeroUnderscoreOu/
 http://steamcommunity.com/groups/0_oWassup/discussions/3/
 https://github.com/ZeroUnderscoreOu/SteamActivityFilter
 */
-
-//ToDo
-// (возможно) перенести Counter++ в условие с префиксной записью
-// (возможно) разбить блок новостей от Гейба по пользователям
-// (возможно) добавить проверку порядка дней по таймстампам, добавить даты
-// (возможно) переписать что-нибудь на for of и querySelectorAll
-// (возможно) получать именно SteamId пользователей на случай непонятных ников; хотя они же все и так в адресах, должны быть подходящими
-// теоретически отчистку формы можно делать через reset
-// должна ли активность стекаться?
-// ( rgJSON.error ? rgJSON.error : rgJSON.success )
-// "Seamonkey": "2.37 - 2.41"
-// заменить clone() на cloneNode()
-// я бы предпочёл устанавливать className вместо Style="Display:None;", как советует MDN, но это требует больше действий и проверок
 
 "use strict";
 (function(){ // scoping
@@ -249,13 +236,6 @@ function ActivityFilterClear() {
 function ActivityContentClear() {
 	var TmpElem = ActivityContainer.getElementsByClassName("blotter_day"); // ActivityContainer contains other elements besides events
 	while (TmpElem.length>0) {
-		/*
-		new Effect.Fade(TmpElem[0],{duration:0.5}); // bit excessive, but swag
-		var IntervalId = setTimeout(function() { // too bad it conflicts with showing swag because of asynchrony
-			ActivityContainer.removeChild(this);
-			clearInterval(IntervalId);
-		}.bind(TmpElem[0]),1000);
-		*/
 		TmpElem[0].parentElement.removeChild(TmpElem[0]); // ActivityContainer contains all found elements but is not always their direct parent
 	};
 };
@@ -281,49 +261,6 @@ function ActivityDayLoad(LoadingDay) {
 		for (Period;Period>=0;Period--) {
 			var CrtDay = LoadingDay + 86400 * Period; // currently loading day, in seconds
 			console.log(new Date(CrtDay*1000).toString(),BaseURL+"ajaxgetusernews/?start="+CrtDay.toString());
-			/*
-			new Ajax.Request(BaseURL+"ajaxgetusernews/?start="+CrtDay.toString(),{ // adding day length in seconds
-				insertion: Insertion.Bottom,
-				method: "get",
-				onSuccess: function(Data) {
-					var Response = Data.responseJSON;
-					var RequestDay = Data.request.url.split("start=")[1]; // have to get day again because of asynchrony
-					var MessageDay = new Date(RequestDay*1000).toLocaleDateString() + "\r\n"; // for error messages
-					if (Response&&Response.success==true&&Response.blotter_html) {
-						if (Response.timestart==RequestDay) { // checking that Steam returned requested day and not a different one
-							g_BlotterNextLoadURL = null; // preventing loading on scrolling
-							ActivityPrepare(Response.blotter_html); // parsing each day separately
-						} else {
-							alert(MessageDay+"Different day returned ("+new Date(Response.timestart*1000).toLocaleDateString()+").");
-						};
-					} else if (Data.responseText) {
-						//ActivityContainer.insert({bottom:Data.responseText});
-						alert(MessageDay+Data.responseText);
-					} else {
-						alert(MessageDay+Data.statusText+"\r\nCouldn't load activity.");
-					};
-				},
-				onFailure: function(Data) {
-					var Response = Data.responseJSON;
-					var RequestDay = Data.request.url.split("start=")[1];
-					var MessageDay = new Date(RequestDay*1000).toLocaleDateString() + "\r\n";
-					if (Response&&Response.message) {
-						//ActivityContainer.insert({bottom:Response.message});
-						alert(MessageDay+Response.message);
-					} else if (Data.responseText) {
-						//ActivityContainer.insert({bottom:Data.responseText});
-						alert(MessageDay+Data.responseText);
-					} else {
-						alert(MessageDay+Data.statusText+"\r\nCouldn't load activity.");
-					};
-				},
-				onComplete: function(Data) {
-					if (Data.request.url.split("start=")[1]==LoadingDay) { // loading finished; Data.responseJSON.timestart may be from different day
-						new Effect.Fade("blotter_throbber",{duration:0.5});
-					};
-				}
-			});
-			*/
 			ActivityLinks.push(BaseURL+"ajaxgetusernews/?start="+CrtDay.toString());
 			//StartLoadingBlotter(BaseURL+"ajaxgetusernews/?start="+CrtDay.toString());
 		};
@@ -341,40 +278,11 @@ function ActivityLoader() {
 		ActivityParse(ActivityContainer.getElementsByClassName("blotter_block"));
 	};
 };
-/*
-function ActivityPrepare(ContentHTML) {
-	var EventContainer = document.createElement("Div"); // container element for activity
-	var EventElements;
-	var EventScripts;
-	EventContainer.innerHTML = ContentHTML; // enabling element functions
-	//EventContainer.update(ContentHTML); update() doesn't fit, because it removes scripts from HTML
-	EventElements = [].slice.call(EventContainer.getElementsByClassName("bb_link")); // transforming HTMLCollection to array
-	EventElements = EventElements.filter(function(Match){return /dynamiclink_\d+/.test(Match.id)}); // filtering only replaced links by corresponding Ids
-	EventScripts = EventContainer.getElementsByTagName("Script");
-	EventScripts = EventScripts[EventScripts.length-1]; // last script, appended at the end of activity; contains dynamic link replacing functions; bit risky to access it by order
-	if (EventScripts&&/ReplaceDynamicLink/.test(EventScripts.textContent)) { // ending script is not always present
-		EventScripts.textContent = EventScripts.textContent.replace( // searching for dynamic contents replacing functions and performing replacemnts
-			/ReplaceDynamicLink\(\s*[^\\](')dynamiclink_(\d+)\1,\s*[^\\](\")(.*?)\3\s*\);/gi, // unescaped single/double quotes and contents of them
-			function(Match,B1,B2,B3,B4,Offset,Variable){ // only B2 & B4 (bracket 2 & bracket 4) are needed - serial number & element contents
-				B4 = B4.replace(/\\u(\d+)/g,function(Match,B1,Offset,Variable){return "&#"+parseInt(B1,16)+";";}); // bit complicated regexp, for unicode symbol codes
-				B4 = B4.replace(/\\r/g,"&#13;").replace(/\\n/g,"&#10;").replace(/\\t/g,"&#09;"); // carriage return, new line & tab
-				EventElements[B2].outerHTML = B4.replace(/\\(.)/g,"$1"); // simple unescape
-				return ""; // erasing found function
-			}
-		);
-	};
-	ActivityParse(EventContainer.getElementsByClassName("blotter_block")); // all events
-};
-*/
 function ActivityParse(EventContainer) {
 	var EventAuthor;
 	var EventType;
 	var EventLink;
 	var TmpElem;
-	//var EventElements;
-	//var EventScripts;
-	//while (EventContainer.length>0)
-	//EventContainer[0]
 	[].forEach.call(EventContainer,function(Match){ // originally did it with new for...of, but Chrome will support it for objects only since 51
 		if (Match.getElementsByClassName("blotter_author_block").length>0) { // event header
 			TmpElem = Match.getElementsByClassName("blotter_author_block")[0].getElementsByTagName("A");
@@ -428,16 +336,6 @@ function ActivityParse(EventContainer) {
 			//ActivityList[TmpElem]["Content"].className = "blotter_day"; // for easier access to shown divs
 			//ActivityList[TmpElem]["Content"].style.display = "None"; // hiding to use an effect later
 		};
-		/*
-		EventElements = Match.getElementsByTagName("Script");
-		EventScripts = document.createElement("Script");
-		while (EventElements.length>0) { // removing scripts  from activity element and readding to make them work
-			EventScripts.textContent += "\r\n" + EventElements[0].textContent;
-			EventElements[0].parentElement.removeChild(EventElements[0]); // preventing duplicates; Match is not always direct parent
-			//EventElements[0].outerHTML = ""; // another variant of removing the script
-		};
-		Match.appendChild(EventScripts); // readding
-		*/
 		Match.style.display = "None";
 		ActivityList[TmpElem]["Content"].push(Match);
 	});
@@ -506,17 +404,6 @@ function ActivityContentShow() {
 	var TmpElem;
 	for (var A=0;A<Checkboxes.length;A++) {
 		if (Checkboxes[A].checked) { // checking for checked checkboxes
-			/*
-			TmpElem = ActivityList[Checkboxes[A].value]["Content"].clone(true); // true for deep cloning; turns out cloning isn't actually necessary
-			if (TmpElem.getElementsByClassName("highlight_strip_scroll").length>0) { // checking for screenshot galleries' preview panel
-				var IntervalId = setTimeout(function() {
-					Blotter_AddHighlightSliders(); // setting scrollbars for it after the effect (panel should be visible)
-					clearInterval(IntervalId);
-				},1000);
-			};
-			ActivityContainer.appendChild(TmpElem);
-			new Effect.Appear(TmpElem,{duration:0.5}); // showing off
-			*/
 			ActivityList[Checkboxes[A].value]["Content"].forEach(function(Match){
 				new Effect.Appear(Match,{duration:0.5});
 			});

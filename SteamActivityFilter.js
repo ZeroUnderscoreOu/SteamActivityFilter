@@ -1,5 +1,5 @@
 /*
-Steam Activity Filter userscript 1.4.0
+Steam Activity Filter userscript 1.4.1
 Written by ZeroUnderscoreOu
 http://steamcommunity.com/id/ZeroUnderscoreOu/
 http://steamcommunity.com/groups/0_oWassup/discussions/3/
@@ -120,8 +120,7 @@ function ActivityInitialize() {
 	);
 	document.getElementById("ActivityStart").addEventListener(
 		"focus",
-		function(){
-			new Effect.Appear("cal1",{duration:0.5});},
+		function(){new Effect.Appear("cal1",{duration:0.5});},
 		false
 	);
 	document.getElementById("ActivityAll").addEventListener(
@@ -336,7 +335,7 @@ function ActivityLoader() {
 		StartLoadingBlotter(ActivityLinks.shift()); // passing the loading to Steam's own function
 	} else {
 		Ajax.Responders.unregister(ActivityResponder);
-		g_BlotterNextLoadURL = null; // preventing loading on scroll
+		window.g_BlotterNextLoadURL = null; // preventing loading on scroll; with Greasemonkey's scope support
 		Blotter_AddHighlightSliders(); // enabling screenshot galleries
 		ActivityParse(ActivityContainer.getElementsByClassName("blotter_block"));
 	};
@@ -458,7 +457,7 @@ function ActivitySplit() {
 			case "Game":
 				ActivitySorted[ActivityList[Key]["Type"]].push({
 					"Id": Key,
-					"Name": ActivityList[Key]["Name"].toUpperCase() // for futher sorting as JS is case-sensitive
+					"Name": ActivityList[Key]["Name"].toLocaleUpperCase() // for futher sorting as JS is case-sensitive, with a bit of L10n
 				});
 		};
 	};

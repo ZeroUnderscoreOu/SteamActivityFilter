@@ -4,6 +4,6 @@ ScriptRequest.onload = function() {
 	var ScriptElement = document.createElement("Script");
 	ScriptElement.type = "Text/JavaScript";
 	ScriptElement.textContent = ScriptRequest.response;
-	document.body.appendChild(ScriptElement);
+	document.head.appendChild(ScriptElement);
 };
 ScriptRequest.send();

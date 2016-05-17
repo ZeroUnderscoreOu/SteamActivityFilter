@@ -1,3 +1,4 @@
+![Steam Activity Filter logo](https://raw.githubusercontent.com/ZeroUnderscoreOu/SteamActivityFilter/master/Logo128.png)
 # Steam Activity Filter userscript
 
 Written by **ZeroUnderscoreOu**
@@ -16,16 +17,12 @@ Filter for friends' activity in Steam. Allows to load activity for selected days
 
 
 
-#### Downloading:
+#### Installation:
 
-Open needed folder on GitHub:
-
-[Greasemonkey](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Greasemonkey) /
-[Firefox](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Firefox) /
-[Chrome](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Chrome) /
-[Opera](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Opera)
-
-open *.user.js / *.xpi / *.crx / *.nex file depending on version, and press "Raw" button at the upper right.
+[Firefox](https://addons.mozilla.org/ru/firefox/addon/steam-activity-filter/) /
+[Chrome](https://chrome.google.com/webstore/detail/steam-activity-filter/hcldbiknhbfgchhdohoebedmmolifhmf) /
+[Opera](https://addons.opera.com/extensions/details/steam-activity-filter/) /
+[Greasemonkey](https://raw.githubusercontent.com/ZeroUnderscoreOu/SteamActivityFilter/master/Greasemonkey/SteamActivityFilter.user.js)
 
 
 
@@ -51,11 +48,13 @@ Loaded activity stacks until cleared, so several days can be consequently loaded
 
 #### Possible problems:
 
-- May lead to memory overload, particularly due to cloning.
+- May lead to memory leak & overload.
 
 - May skip some activity (which I haven't encountered).
 
 - Does few excessive operations, particularly due to dynamically loaded scripts.
+
+- In case of little activity previous day may load automatically (as next day is loaded when previous is scrolled to the end)
 
 - Events are duplicated if same day is loaded several times (as loaded activity stacks).
 
@@ -89,11 +88,11 @@ Order & actions of functions:
 
 	- setting day to load activity for
 
-- *ActivityFilterClear()* - called by ActivityFilterShow() & form button
+- *ActivityFilterClear()* - called by ActivitySplit() & form button
 
 	- clearing of form
 
-- *ActivityContentClear()* - called by ActivityContentShow() & form button
+- *ActivityContentClear()* - called by form button
 
 	- clearing of displayed activity
 
@@ -103,13 +102,25 @@ Order & actions of functions:
 
 - *ActivityDayLoad()* - called by form button
 
-	- loading activity for set day
+	- preparing links for activity day(s)
 
-- *ActivityParse()* - called by ActivityDayLoad()
+- *ActivityLoader()* - called by ActivityDayLoad() and ActivityResponder
+
+	- calling loading of activity day; calling parsing when all loaded
+
+- *ActivityParse()* - called by ActivityLoader()
 
 	- preparing & sorting activity & getting info
 
-- *ActivityFilterShow()* - called by ActivityParse()
+- *ActivitySplit()* - called by ActivityParse()
+
+	- further preparing & sorting activity
+
+- *ActivitySort()* - called by ActivitySplit()
+
+	- sorts split activity by alphabet
+
+- *ActivityFilterShow()* - called by ActivitySplit()
 
 	- generating form elements
 
@@ -117,29 +128,32 @@ Order & actions of functions:
 
 	- displaying filtered activity
 
-*ActivityList* contains activity, sorted by author's ID; activity is stored in a nested field instead of root so not to write additional data into HTML elements. Fields are "Content" for activity itself, "Name" for author's name & "Type" for activity type.
+*ActivityList* contains activity, sorted by author's Id; activity is stored in a nested field instead of root so not to write additional data into HTML elements. Fields are "Content" for activity itself, "Name" for author's name & "Type" for activity type.
 
 *BaseURL* is used for links for profile related resources; originally it was got from g_BlotterNextLoadURL, because http://steamcommunity.com/my/ & http://steamcommunity.com/profiles/ doesn't work with the calendar - probably because of the redirect, if requested with post method, current month is always returned (parameters aren't passed after redirect), so it either should be get method or non-redirecting URL. These URLs are more cool, but I switched to window.location.href.
 
 At some point I used *ActivityCheck()*, which was checking if any activity is currently loading, because during it g_BlotterNextLoadURL was set to null and throwed in ActivityInitialize(). But as I switched to a constant URL it's no longer needed.
 
-*ActivityInitialize()* - inserts filter form, needed scripts & stylesheets into the page, initializes calendar. Restyles blotter_throbber for it to be visible independent from user scrolling (and to be more cool). As it's more logical to show it at the top of the page where the form is, instead of the bottom, such display doesn't shift all the other content and should be less resource intensive. Loadng indicator makes it more clear when activity is loading.
+*ActivityInitialize()* - inserts filter form & needed stylesheets into the page, initializes calendar. Restyles blotter_throbber for it to be visible independent from user scrolling (and to be more cool). As it's more logical to show it at the top of the page where the form is, instead of the bottom, such display doesn't shift all the other content and should be less resource intensive. Loadng indicator makes it more clear when activity is loading.
 
-*ActivityCalendarLoad()* - reworked version of calChangeMonth(), calling ActivityCalendarFill() instead of calChangeReceive() and with calChangeMonthExtraFunc removed as superfluous. It's rewritten to use Ajax.Request() instead of createQuery2(), with some checks moved from ActivityCalendarFill() to it. Has added optional parameter, which determines which calendar URL to use (personal or group) and how to treat loading error (trying alternative URL or displaying the error). User's calendar is unavailable if user hasn't join any groups, and group calendar, on the contrary, is available even to the non-members. Thus, clandar URL of some particularly awesome group is used as an alternative. Uses an effect for ActivityDate to indicate that alternative URL was used - added to check how many users (if there would be any users) would have this error. Calendars have a hardcoded ID in XML response, and though ID is required, it's not used (earlier group calendar seemed to use it, but now it doesn't).
+*ActivityCalendarLoad()* - reworked version of calChangeMonth(), calling ActivityCalendarFill() instead of calChangeReceive() and with calChangeMonthExtraFunc removed as superfluous. It's rewritten to use Ajax.Request() instead of createQuery2(), with some checks moved from ActivityCalendarFill() to it. Has additional parameter, which determines which calendar URL to use (personal or group) and how to treat loading error (trying alternative URL or displaying the error). User's calendar is unavailable if user hasn't join any groups, and group calendar, on the contrary, is available even to the non-members. Thus, clandar URL of some particularly awesome group is used as an alternative. Uses an effect for ActivityStart to indicate that alternative URL was used - added to check how many users (if there would be any users) would have this error. Calendars have a hardcoded Id in XML response, and though Id is required, it's not used (earlier group calendar seemed to use it).
 
-*ActivityCalendarFill()* - reworked version of calChangeReceive(). Originally was called through XML request in ActivityCalendarLoad() and had access to request's inner variables; now called directly and is passed response data through parameter. Month navigation links are changed; HRef isn't assigned to day elements; function call is assigned through anonymous OnClick handler with bound this instead of JavaScript protocol; new Element() is used instead of document.createElement(). Probably will change or add an option for week start.
+*ActivityCalendarFill()* - reworked version of calChangeReceive(). Originally was called through XML request in ActivityCalendarLoad() and had access to request's inner variables; now called directly and is passed response data through a parameter. Month navigation handlers are changed; HRef isn't assigned to day elements; onclick handler with JavaScript protocol replaced by event handler. Maybe will change or add an option for week start.
 
-*ActivityDayLoad()* - reworked version of StartLoadingBlotter(). g_BlotterNextLoadURL is cleared to prevent further loading; Blotter_RemoveDuplicates() removed to prevent hiding duplicates, which may hide an event when sorted by user; RecordAJAXPageView removed because Google spying. Uses only requested day as a parameter, with base URL being in the function. Activity is loaded in a loop with a separate iteration for each day. If there's no activity, sometimes Steam returns day different from selected (usually previous). Because of this, I added a check for time between Data.request.url and Data.responseJSON.timestart. The former is also used to check when loop gets to the last URL. Originally I used the latter, but switched because of returned day mismatch. Theoretically, I could use Data.responseJSON.next_request instead of changing the request URL, but it would requre for each previous request to load before making next.
+*ActivityDayLoad()* - generates links for each activity day to load and writes them to ActivityLinks; registers a responder to Ajax loads (which assumed to be activity days). Uses only starting day as a parameter, with base URL being in the function.
 
-In *ActivityParse()*:
+*ActivityLoader()* - calls Steam's loading function for activity days, one at a time; when done, unregisters responder, clears g_BlotterNextLoadURL to prevent further loading, calls a function to enable screenshot galleries and calls activity parser.
 
-1. The activity ending script is parsed, which is originally appended after all activity to replace dynamic links (store, community & YouTube) with actual content. Script contains function calls with markup, which is searched for and used for replacement "by hand" in the activity content. Then the search match is removed from the script - script should be removed anyway, and shortening it should speed up search. IMO making all replacements right away, instead of separately for each link on load, is more efficient. Replacement content is also unescaped, because for some reason JS special characters aren't interpreted. I suspect it's caused by the parsing and they become treated as separate characters instead of escape sequences.
+In *ActivityParse()* all events are parsed & sorted by author Id. During that, author profile links are cycled through, because their position in page isn't constant depending on the event. Some events contain additional links, which should be skipped. RegExp is used to check for link text - avatar links contain new lines & tabs instead of being empty. \w doesn't work with russian (and any other non-latin language). Activity element is hidden right away and added to an array of events for that Id.
 
-2. All events are parsed & sorted by author ID. During that, author profile links are cycled through, because their position in page isn't constant depending on the event. Some events contain additional links, which should be skipped. RegExp is used to check for link text - avatar links contain new lines & tabs instead of being empty. \w doesn't work with russian (and any other non-latin language) - apparently, russian doesn't have letters. Created div, containg activity for a particular author, is assigned "blotter_day" class for easier access, particularly in ActivityContentClear(). That class is already used for activity div for a single day, and IMO reusing it is more convenient than creating a separate one.
+*ActivitySplit()* splits ActivityList into smaller arrays by type, calls ActivitySort() to sort them by alphabet & ActivityFilterShow() right after that to show activity filter. Shows separator elements depending on present activity.
 
-3. All scripts from current event are readded and then ActivityList is filled. This "hack" to make scripts work originally was in ActivityContentShow(), but it's more efficient to perform this readding one time on event parsing rather then on each display. If scripts are added as is, they don't trigger, so instead they're moved from event to separate element and then readded. Main problems I had were with scripts which enable screenshot galleries, but also with those responsible for comment field & emoticon selection. They weren't executed after any other way of addition. Though I suspect that I overlooked something.
+*ActivityFilterShow()* fills the divs in filter form top to bottom instead of original left to right for convenience. Uses activity array & type as parameters; automatically uses divs according to type.
+*ActivityFilterShow()* fills the divs in filter form top to bottom instead of original left to right for convenience. Uses activity array & type as parameters; automatically uses divs according to type.
 
-*ActivityContentShow()* clones showed activity and calls scrollbar setting function. Turns out cloning isn't required, but it's better to use it. Appending doesn't remove an element from ActivityList as I thought, but if element isn't cloned, effects glitch for some reason, and after repeated display that element gets style "Display: None". I suspect it might be related to actions of scripts and that some data from them is kept in the memory after element is removed. If there're screenshot events, additional function is called. It's called with a timeout, after event is already displayed, because it doesn't work with hidden elements. That function sets scrollbars where they're needed and originally is called after activity load, but since activity isn't displayed right away and is split, call is added for each time it might be needed. This may lead to repeated calls & is bit excessive, but the function itself doesn't perform actions which aren't needed, and I couldn't rewrite it to work with not displayed HTML.
+*ActivityContentShow()* shows elements for selected Ids, with a swag effect, and hides not selected.
+
+Activity calendar is restyled with CSS' hover in place of setupCalRollovers(). I don't know why the heck they took such a difficult way to set this up, probably was yet when pseudo classes didn't exist.
 
 Some of the URLs are hardcoded in functions, which is probably not the most compatible way.
 

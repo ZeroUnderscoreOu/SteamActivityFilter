@@ -1,3 +1,4 @@
+![Steam Activity Filter logo](https://raw.githubusercontent.com/ZeroUnderscoreOu/SteamActivityFilter/master/Logo128.png)
 # Steam Activity Filter userscript
 
 Written by **ZeroUnderscoreOu**
@@ -16,16 +17,12 @@ Filter for friends' activity in Steam. Allows to load activity for selected days
 
 
 
-#### Downloading:
+#### Installation:
 
-Open needed folder on GitHub:
-
-[Greasemonkey](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Greasemonkey) /
-[Firefox](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Firefox) /
-[Chrome](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Chrome) /
-[Opera](https://github.com/ZeroUnderscoreOu/SteamActivityFilter/raw/master/Opera)
-
-open *.user.js / *.xpi / *.crx / *.nex file depending on version, and press "Raw" button at the upper right.
+[Firefox](https://addons.mozilla.org/ru/firefox/addon/steam-activity-filter/) /
+[Chrome](https://chrome.google.com/webstore/detail/steam-activity-filter/hcldbiknhbfgchhdohoebedmmolifhmf) /
+[Opera](https://addons.opera.com/extensions/details/steam-activity-filter/) /
+[Greasemonkey](https://raw.githubusercontent.com/ZeroUnderscoreOu/SteamActivityFilter/master/Greasemonkey/SteamActivityFilter.user.js)
 
 
 
@@ -141,7 +138,7 @@ At some point I used *ActivityCheck()*, which was checking if any activity is cu
 
 *ActivityCalendarLoad()* - reworked version of calChangeMonth(), calling ActivityCalendarFill() instead of calChangeReceive() and with calChangeMonthExtraFunc removed as superfluous. It's rewritten to use Ajax.Request() instead of createQuery2(), with some checks moved from ActivityCalendarFill() to it. Has additional parameter, which determines which calendar URL to use (personal or group) and how to treat loading error (trying alternative URL or displaying the error). User's calendar is unavailable if user hasn't join any groups, and group calendar, on the contrary, is available even to the non-members. Thus, clandar URL of some particularly awesome group is used as an alternative. Uses an effect for ActivityStart to indicate that alternative URL was used - added to check how many users (if there would be any users) would have this error. Calendars have a hardcoded Id in XML response, and though Id is required, it's not used (earlier group calendar seemed to use it).
 
-*ActivityCalendarFill()* - reworked version of calChangeReceive(). Originally was called through XML request in ActivityCalendarLoad() and had access to request's inner variables; now called directly and is passed response data through a parameter. Month navigation handlers are changed; HRef isn't assigned to day elements; OnClick handler with JavaScript protocol replaced by event handler. Maybe will change or add an option for week start.
+*ActivityCalendarFill()* - reworked version of calChangeReceive(). Originally was called through XML request in ActivityCalendarLoad() and had access to request's inner variables; now called directly and is passed response data through a parameter. Month navigation handlers are changed; HRef isn't assigned to day elements; onclick handler with JavaScript protocol replaced by event handler. Maybe will change or add an option for week start.
 
 *ActivityDayLoad()* - generates links for each activity day to load and writes them to ActivityLinks; registers a responder to Ajax loads (which assumed to be activity days). Uses only starting day as a parameter, with base URL being in the function.
 

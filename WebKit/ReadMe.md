@@ -48,17 +48,17 @@ Loaded activity stacks until cleared, so several days can be consequently loaded
 
 #### Possible problems:
 
-- May lead to memory leak.
+- May lead to memory leak & overload.
 
 - May skip some activity (which I haven't encountered).
 
 - Does few excessive operations, particularly due to dynamically loaded scripts.
 
-- In case of little activity previous day may load automatically (as next day is loaded when previous is scrolled to the end).
+- In case of little activity previous day may load automatically (as next day is loaded when previous is scrolled to the end)
 
 - Events are duplicated if same day is loaded several times (as loaded activity stacks).
 
-- Steam's calendar, and, thus, script itself isn't intended to work with any century other then current 21st (year is stored in two digit format)(yea, I look to the future).
+- Steam's calendar, and, thus, script itself isn't intended to work with any century other then current 21st (year is stored in two digit format).
 
 
 
